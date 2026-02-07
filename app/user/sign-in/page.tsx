@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
-import { Building2, Lock, User, AlertCircle, Loader2, Shield } from "lucide-react";
+import { Building2, Lock, User, AlertCircle, Loader2, Shield, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleHospitalLogin = async () => {
     if (!username || !password) {
@@ -110,14 +111,22 @@ export default function LoginPage() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  className="w-full pl-11 pr-4 py-3.5 bg-white/50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 hover:border-green-300 hover:shadow-sm transition-all duration-200 outline-none shadow-sm"
+                  className="w-full pl-11 pr-12 py-3.5 bg-white/50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 hover:border-green-300 hover:shadow-sm transition-all duration-200 outline-none shadow-sm"
                   disabled={isLoading}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
             </div>
 
@@ -143,7 +152,7 @@ export default function LoginPage() {
           {/* FORGOT PASSWORD */}
           <button
             onClick={() => router.push("/user/forgot-password")}
-            className="w-full text-sm text-green-600 hover:text-green-800 mt-4 font-medium transition-colors duration-200"
+            className="w-full text-sm text-gray-900 hover:text-gray-600 mt-4 font-medium transition-colors duration-200"
           >
             Forgot Password?
           </button>
