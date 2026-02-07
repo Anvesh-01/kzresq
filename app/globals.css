@@ -245,6 +245,49 @@ body {
   animation: emergencyPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+@keyframes uber-reveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+    filter: blur(20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes uber-exit {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.1);
+    filter: blur(10px);
+    pointer-events: none;
+  }
+}
+
+@keyframes premium-blur-in {
+  0% {
+    filter: blur(10px);
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  100% {
+    filter: blur(0);
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .delay-100 {
   animation-delay: 100ms;
 }
