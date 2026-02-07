@@ -189,7 +189,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Build update object
-    const updateData: Record<string, any> = {};
+    const updateData: Record<string, string | boolean> = {};
 
     if (is_available !== undefined) updateData.is_available = is_available;
     if (vehicle_number) updateData.vehicle_number = vehicle_number.trim();

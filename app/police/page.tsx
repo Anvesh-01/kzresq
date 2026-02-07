@@ -1,77 +1,108 @@
-"use client";
+"use client"
 
-import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
-import { Shield, MapPin, Clock, AlertCircle, Phone, CheckCircle, Eye, Radio, Siren, Hospital, Navigation } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
+import dynamic from "next/dynamic"
+import { useEffect, useState } from "react"
+import {
+  Shield,
+  MapPin,
+  Clock,
+  AlertCircle,
+  Phone,
+  CheckCircle,
+  Eye,
+  Radio,
+  Siren,
+  Hospital,
+  Navigation,
+  ChevronRight,
+  Activity,
+} from "lucide-react"
+import { createClient } from "@supabase/supabase-js"
 
 const PoliceMap = dynamic(() => import("./map/PoliceMap"), {
   ssr: false,
-  loading: () => <div className="h-96 lg:h-[500px] w-full bg-gray-100 animate-pulse rounded-xl flex items-center justify-center text-gray-400 font-medium">Loading Interactive Map...</div>,
-});
+  loading: () => (
+    <div className="h-96 lg:h-[500px] w-full bg-slate-100 animate-pulse-subtle rounded-lg flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <MapPin className="w-8 h-8 text-slate-400 animate-pulse" />
+        <span className="text-slate-500 text-sm font-medium tracking-wide">
+          Loading Interactive Map...
+        </span>
+      </div>
+    </div>
+  ),
+})
 
 /* ---------------- SUPABASE SETUP ---------------- */
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 /* ---------------- TYPES ---------------- */
-type Hospital = {
-  id: string;
-  name: string;
-  address: string;
-  latitude: number;
-  longitude: number;
-  phone: string | null;
-};
+type HospitalType = {
+  id: string
+  name: string
+  address: string
+  latitude: number
+  longitude: number
+  phone: string | null
+}
 
 type Emergency = {
-  id: string;
-  phone_number: string;
-  name: string | null;
-  latitude: number;
-  longitude: number;
-  location_text: string | null;
-  emergency_level: 'low' | 'medium' | 'high' | 'critical';
-  emergency_type: string | null;
-  description: string | null;
-  status: 'pending' | 'acknowledged' | 'dispatched' | 'in_progress' | 'resolved' | 'cancelled';
-  assigned_hospital_name: string | null;
-  assigned_hospital_lat: number | null;
-  assigned_hospital_lng: number | null;
-  assigned_ambulance_number: string | null;
-  driver_name: string | null;
-  driver_phone: string | null;
-  blood_group: string | null;
-  allergies: string | null;
-  medical_conditions: string | null;
-  created_at: string;
-  updated_at: string;
-  hospital_id: string | null;
-  hospital?: Hospital;
-};
+  id: string
+  phone_number: string
+  name: string | null
+  latitude: number
+  longitude: number
+  location_text: string | null
+  emergency_level: "low" | "medium" | "high" | "critical"
+  emergency_type: string | null
+  description: string | null
+  status:
+    | "pending"
+    | "acknowledged"
+    | "dispatched"
+    | "in_progress"
+    | "resolved"
+    | "cancelled"
+  assigned_hospital_name: string | null
+  assigned_hospital_lat: number | null
+  assigned_hospital_lng: number | null
+  assigned_ambulance_number: string | null
+  driver_name: string | null
+  driver_phone: string | null
+  blood_group: string | null
+  allergies: string | null
+  medical_conditions: string | null
+  created_at: string
+  updated_at: string
+  hospital_id: string | null
+  hospital?: HospitalType
+}
 
 /* ---------------- MAP COMPONENT WITH ROUTE ---------------- */
-const EmergencyRouteMap = ({
+function EmergencyRouteMap({
   emergencyLat,
   emergencyLng,
   hospitalLat,
   hospitalLng,
   hospitalName,
 }: {
-  emergencyLat: number;
-  emergencyLng: number;
-  hospitalLat?: number | null;
-  hospitalLng?: number | null;
-  hospitalName?: string | null;
-}) => {
+  emergencyLat: number
+  emergencyLng: number
+  hospitalLat?: number | null
+  hospitalLng?: number | null
+  hospitalName?: string | null
+}) {
   if (hospitalLat && hospitalLng) {
     return (
       <div className="space-y-4">
-        <div className="bg-white rounded-xl border-2 border-gray-200 p-4">
+        <div className="bg-white rounded-lg border border-slate-200 p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Navigation className="w-5 h-5 text-blue-600" />
-            <h3 className="font-bold text-gray-900">Emergency Location & Route</h3>
+            <Navigation className="w-4 h-4 text-slate-700" />
+            <h3 className="font-semibold text-slate-900 text-sm tracking-tight">
+              Emergency Route
+            </h3>
           </div>
           <PoliceMap
             userLat={Number(emergencyLat)}
@@ -79,370 +110,403 @@ const EmergencyRouteMap = ({
             hospitalLat={Number(hospitalLat)}
             hospitalLng={Number(hospitalLng)}
           />
-          <div className="mt-3 flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2 text-gray-600">
-              <MapPin className="w-4 h-4 text-red-600" />
-              <span>Emergency: {emergencyLat.toFixed(4)}, {emergencyLng.toFixed(4)}</span>
+          <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-red-500" />
+              <span className="font-mono">
+                {emergencyLat.toFixed(4)}, {emergencyLng.toFixed(4)}
+              </span>
             </div>
-            <div className="flex items-center gap-2 text-gray-600">
-              <Hospital className="w-4 h-4 text-blue-600" />
-              <span>{hospitalName || 'Hospital'}: {hospitalLat.toFixed(4)}, {hospitalLng.toFixed(4)}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              <span className="font-mono">
+                {hospitalName || "Hospital"}: {hospitalLat.toFixed(4)},{" "}
+                {hospitalLng.toFixed(4)}
+              </span>
             </div>
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   return (
     <div className="space-y-4">
       <iframe
-        className="w-full h-96 lg:h-[500px] rounded-xl border-0 shadow-inner"
+        title="Emergency location map"
+        className="w-full h-96 lg:h-[500px] rounded-lg border-0"
         loading="lazy"
         src={`https://maps.google.com/maps?q=${emergencyLat},${emergencyLng}&output=embed`}
       />
-      <div className="p-4 bg-orange-50 border-2 border-orange-200 rounded-xl flex items-center gap-3">
-        <AlertCircle className="w-5 h-5 text-orange-600" />
-        <p className="text-orange-800 font-semibold text-sm">
-          {hospitalName ? "Fetching hospital location details..." : "No hospital assigned to this emergency yet."}
+      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3">
+        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+        <p className="text-amber-800 text-sm font-medium">
+          {hospitalName
+            ? "Fetching hospital location details..."
+            : "No hospital assigned to this emergency yet."}
         </p>
       </div>
     </div>
-  );
-};
+  )
+}
 
 /* ---------------- UTILITY FUNCTIONS ---------------- */
 const getTimeAgo = (timestamp: string) => {
-  const now = new Date();
-  const created = new Date(timestamp);
-  const diffMs = now.getTime() - created.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
+  const now = new Date()
+  const created = new Date(timestamp)
+  const diffMs = now.getTime() - created.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
 
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+  if (diffMins < 1) return "Just now"
+  if (diffMins < 60) return `${diffMins}m ago`
 
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
 
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-};
+  const diffDays = Math.floor(diffHours / 24)
+  return `${diffDays}d ago`
+}
 
-const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): string => {
-  const R = 6371; // Earth's radius in km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
+const calculateDistance = (
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): string => {
+  const R = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLon = ((lon2 - lon1) * Math.PI) / 180
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const distance = R * c;
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  const distance = R * c
 
-  return distance < 1 ? `${(distance * 1000).toFixed(0)}m` : `${distance.toFixed(2)}km`;
-};
+  return distance < 1
+    ? `${(distance * 1000).toFixed(0)}m`
+    : `${distance.toFixed(2)}km`
+}
 
+/* ---------------- LEVEL BADGE STYLES ---------------- */
+const getLevelStyles = (level: string) => {
+  switch (level) {
+    case "critical":
+      return "bg-red-600 text-white"
+    case "high":
+      return "bg-orange-500 text-white"
+    case "medium":
+      return "bg-amber-500 text-white"
+    default:
+      return "bg-sky-500 text-white"
+  }
+}
+
+const getLevelDot = (level: string) => {
+  switch (level) {
+    case "critical":
+      return "bg-red-500"
+    case "high":
+      return "bg-orange-500"
+    case "medium":
+      return "bg-amber-500"
+    default:
+      return "bg-sky-500"
+  }
+}
+
+const getStatusStyles = (status: string) => {
+  switch (status) {
+    case "pending":
+      return "bg-red-50 text-red-700 border-red-200"
+    case "acknowledged":
+      return "bg-blue-50 text-blue-700 border-blue-200"
+    case "dispatched":
+      return "bg-indigo-50 text-indigo-700 border-indigo-200"
+    case "in_progress":
+      return "bg-amber-50 text-amber-700 border-amber-200"
+    case "resolved":
+      return "bg-emerald-50 text-emerald-700 border-emerald-200"
+    default:
+      return "bg-slate-50 text-slate-700 border-slate-200"
+  }
+}
+
+/* ================================================================ */
+/*  MAIN COMPONENT                                                   */
+/* ================================================================ */
 export default function PoliceDashboard() {
-  const [timeNow, setTimeNow] = useState("");
-  const [emergencies, setEmergencies] = useState<Emergency[]>([]);
-  const [selected, setSelected] = useState<Emergency | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [assignedHospital, setAssignedHospital] = useState<Hospital | null>(null);
+  const [timeNow, setTimeNow] = useState("")
+  const [emergencies, setEmergencies] = useState<Emergency[]>([])
+  const [selected, setSelected] = useState<Emergency | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [assignedHospital, setAssignedHospital] =
+    useState<HospitalType | null>(null)
 
-  /* ---------------- LIVE CLOCK ---------------- */
+  /* --- Live Clock --- */
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeNow(new Date().toLocaleTimeString());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+      setTimeNow(
+        new Date().toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })
+      )
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
 
-  /* ---------------- FETCH EMERGENCIES WITH HOSPITAL DATA ---------------- */
+  /* --- Fetch Emergencies --- */
   const fetchEmergencies = async () => {
     try {
       const { data, error } = await supabase
-        .from('sos_emergencies')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from("sos_emergencies")
+        .select("*")
+        .order("created_at", { ascending: false })
 
-      if (error) throw error;
+      if (error) throw error
 
-      const newEmergencies = data || [];
-      setEmergencies(newEmergencies);
+      const newEmergencies = data || []
+      setEmergencies(newEmergencies)
 
-      // Automatically update selected emergency if data changed
       if (selected) {
-        const updated = newEmergencies.find(e => e.id === selected.id);
+        const updated = newEmergencies.find((e) => e.id === selected.id)
         if (updated) {
-          if (updated.hospital_id !== selected.hospital_id ||
-            updated.assigned_hospital_name !== selected.assigned_hospital_name ||
-            updated.status !== selected.status) {
-            console.log('Assignment or status change detected, refreshing view...');
-            viewLocation(updated);
+          if (
+            updated.hospital_id !== selected.hospital_id ||
+            updated.assigned_hospital_name !==
+              selected.assigned_hospital_name ||
+            updated.status !== selected.status
+          ) {
+            viewLocation(updated)
           } else {
-            setSelected(updated);
+            setSelected(updated)
           }
         }
       }
 
-      setLoading(false);
+      setLoading(false)
     } catch (error) {
-      console.error('Error fetching emergencies:', error);
-      setLoading(false);
+      console.error("Error fetching emergencies:", error)
+      setLoading(false)
     }
-  };
+  }
 
-  /* ---------------- FETCH HOSPITAL BY ID ---------------- */
+  /* --- Fetch Hospital by ID --- */
   const fetchHospitalById = async (hospitalId: string) => {
     try {
       const { data, error } = await supabase
-        .from('hospitals')
-        .select('*')
-        .eq('id', hospitalId)
-        .single();
+        .from("hospitals")
+        .select("*")
+        .eq("id", hospitalId)
+        .single()
 
-      if (error) {
-        console.error('Hospital fetch error:', error);
-        return null;
-      }
-
-      return data as Hospital;
-    } catch (err) {
-      console.error('Error fetching hospital:', err);
-      return null;
+      if (error) return null
+      return data as HospitalType
+    } catch {
+      return null
     }
-  };
+  }
 
-  /* ---------------- FETCH HOSPITAL BY NAME ---------------- */
+  /* --- Fetch Hospital by Name --- */
   const fetchHospitalByName = async (name: string) => {
     try {
-      // 1. Try exact (case-insensitive) match
       const { data: exactMatch, error: exactError } = await supabase
-        .from('hospitals')
-        .select('*')
-        .ilike('name', name)
-        .maybeSingle();
+        .from("hospitals")
+        .select("*")
+        .ilike("name", name)
+        .maybeSingle()
 
-      if (!exactError && exactMatch) return exactMatch as Hospital;
+      if (!exactError && exactMatch) return exactMatch as HospitalType
 
-      // 2. Try relaxed match (remove spaces/dots and use ilike with wildcards)
-      const _cleanName = name.replace(/[^a-zA-Z0-9]/g, '');
       const { data: fuzzyMatches, error: fuzzyError } = await supabase
-        .from('hospitals')
-        .select('*')
-        .ilike('name', `%${name.split(' ')[0]}%`)
-        .limit(5);
+        .from("hospitals")
+        .select("*")
+        .ilike("name", `%${name.split(" ")[0]}%`)
+        .limit(5)
 
       if (!fuzzyError && fuzzyMatches && fuzzyMatches.length > 0) {
-        // Find best match if multiple
-        return fuzzyMatches[0] as Hospital;
+        return fuzzyMatches[0] as HospitalType
       }
 
-      return null;
-    } catch (err) {
-      console.error('Error fetching hospital by name:', err);
-      return null;
+      return null
+    } catch {
+      return null
     }
-  };
+  }
 
-  /* ---------------- REAL-TIME SUBSCRIPTION ---------------- */
+  /* --- Real-time Subscription --- */
   useEffect(() => {
-    fetchEmergencies();
+    fetchEmergencies()
 
-    // Subscribe to real-time changes
     const channel = supabase
-      .channel('sos_emergencies_changes')
+      .channel("sos_emergencies_changes")
       .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'sos_emergencies'
-        },
-        (payload) => {
-          console.log('Real-time update:', payload);
-          fetchEmergencies(); // Refresh data on any change
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sos_emergencies" },
+        () => {
+          fetchEmergencies()
         }
       )
-      .subscribe();
+      .subscribe()
 
     return () => {
-      supabase.removeChannel(channel);
-    };
+      supabase.removeChannel(channel)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [])
 
-  /* ---------------- UPDATE STATUS ---------------- */
-  const updateStatus = async (id: string, newStatus: Emergency['status']) => {
+  /* --- Update Status --- */
+  const updateStatus = async (id: string, newStatus: Emergency["status"]) => {
     try {
       const { error } = await supabase
-        .from('sos_emergencies')
-        .update({
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id);
+        .from("sos_emergencies")
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq("id", id)
 
-      if (error) throw error;
+      if (error) throw error
 
-      // Optimistic update
-      setEmergencies(prev =>
-        prev.map(e => e.id === id ? { ...e, status: newStatus } : e)
-      );
+      setEmergencies((prev) =>
+        prev.map((e) => (e.id === id ? { ...e, status: newStatus } : e))
+      )
 
       if (selected?.id === id) {
-        setSelected(prev => prev ? { ...prev, status: newStatus } : null);
+        setSelected((prev) => (prev ? { ...prev, status: newStatus } : null))
       }
     } catch (error) {
-      console.error('Error updating status:', error);
+      console.error("Error updating status:", error)
     }
-  };
+  }
 
-  const markAcknowledged = (id: string) => updateStatus(id, 'acknowledged');
-  const markInProgress = (id: string) => updateStatus(id, 'in_progress');
-  const markResolved = (id: string) => updateStatus(id, 'resolved');
+  const markAcknowledged = (id: string) => updateStatus(id, "acknowledged")
+  const markInProgress = (id: string) => updateStatus(id, "in_progress")
+  const markResolved = (id: string) => updateStatus(id, "resolved")
 
-  /* ---------------- VIEW LOCATION ---------------- */
+  /* --- View Location --- */
   const viewLocation = async (emergency: Emergency) => {
-    setSelected(emergency);
+    setSelected(emergency)
 
-    console.log('Selected emergency:', emergency);
-    console.log('Hospital name:', emergency.assigned_hospital_name);
-    console.log('Hospital lat:', emergency.assigned_hospital_lat);
-    console.log('Hospital lng:', emergency.assigned_hospital_lng);
-
-    // Check if we have hospital coordinates in the emergency record
-    if (emergency.assigned_hospital_lat && emergency.assigned_hospital_lng) {
-      const hospitalData = {
-        id: '',
-        name: emergency.assigned_hospital_name || 'Assigned Hospital',
-        address: '',
+    if (
+      emergency.assigned_hospital_lat &&
+      emergency.assigned_hospital_lng
+    ) {
+      setAssignedHospital({
+        id: "",
+        name: emergency.assigned_hospital_name || "Assigned Hospital",
+        address: "",
         latitude: emergency.assigned_hospital_lat,
         longitude: emergency.assigned_hospital_lng,
-        phone: null
-      };
-      console.log('Setting hospital data:', hospitalData);
-      setAssignedHospital(hospitalData);
+        phone: null,
+      })
     } else if (emergency.hospital_id) {
-      console.log('Fetching hospital data from hospitals table for ID:', emergency.hospital_id);
-      const hospitalData = await fetchHospitalById(emergency.hospital_id);
-      if (hospitalData) {
-        console.log('Successfully fetched hospital fallback data by ID:', hospitalData);
-        setAssignedHospital(hospitalData);
-      } else {
-        console.log('Failed to fetch hospital fallback data by ID');
-        setAssignedHospital(null);
-      }
+      const hospitalData = await fetchHospitalById(emergency.hospital_id)
+      setAssignedHospital(hospitalData)
     } else if (emergency.assigned_hospital_name) {
-      console.log('Fetching hospital data by name:', emergency.assigned_hospital_name);
-      const hospitalData = await fetchHospitalByName(emergency.assigned_hospital_name);
-      if (hospitalData) {
-        console.log('Successfully fetched hospital fallback data by Name:', hospitalData);
-        setAssignedHospital(hospitalData);
-      } else {
-        console.log('Failed to fetch hospital fallback data by Name');
-        setAssignedHospital(null);
-      }
+      const hospitalData = await fetchHospitalByName(
+        emergency.assigned_hospital_name
+      )
+      setAssignedHospital(hospitalData)
     } else {
-      console.log('No hospital coordinates, hospital_id, or hospital_name found');
-      setAssignedHospital(null);
+      setAssignedHospital(null)
     }
 
     setTimeout(() => {
-      const mapSection = document.getElementById('location-map-section');
+      const mapSection = document.getElementById("location-map-section")
       if (mapSection) {
-        mapSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        mapSection.scrollIntoView({ behavior: "smooth", block: "center" })
       }
-    }, 100);
-  };
+    }, 100)
+  }
 
-  /* ---------------- COMPUTED VALUES ---------------- */
-  const getPriorityStyles = (level: string) => {
-    switch (level) {
-      case 'critical':
-        return 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-200';
-      case 'high':
-        return 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-200';
-      case 'medium':
-        return 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg shadow-yellow-200';
-      default:
-        return 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-200';
-    }
-  };
+  /* --- Computed --- */
+  const activeEmergencies = emergencies.filter((e) =>
+    ["pending", "acknowledged", "dispatched", "in_progress"].includes(e.status)
+  )
+  const criticalCount = emergencies.filter(
+    (e) =>
+      e.emergency_level === "critical" &&
+      ["pending", "acknowledged", "dispatched", "in_progress"].includes(
+        e.status
+      )
+  ).length
+  const resolvedCount = emergencies.filter(
+    (e) => e.status === "resolved"
+  ).length
 
-  const activeEmergencies = emergencies.filter(e =>
-    ['pending', 'acknowledged', 'dispatched', 'in_progress'].includes(e.status)
-  );
-  const criticalCount = emergencies.filter(e =>
-    e.emergency_level === 'critical' &&
-    ['pending', 'acknowledged', 'dispatched', 'in_progress'].includes(e.status)
-  ).length;
-  const resolvedCount = emergencies.filter(e => e.status === 'resolved').length;
-
+  /* ================================================================ */
+  /*  RENDER                                                           */
+  /* ================================================================ */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* ================= HEADER ================= */}
-      <header className="bg-white/80 backdrop-blur-lg border-b border-gray-200 shadow-sm sticky top-0 z-50">
-        <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
-          {/* Mobile Layout */}
+    <div className="min-h-screen bg-slate-50">
+      {/* ===== HEADER ===== */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div className="px-4 sm:px-6 lg:px-8 py-3 lg:py-4">
+          {/* Mobile */}
           <div className="flex flex-col gap-3 sm:hidden">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-700 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
-                  <Shield className="w-5 h-5 text-white" strokeWidth={2.5} />
+                <div className="w-9 h-9 bg-slate-900 rounded-lg flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-black bg-gradient-to-br from-red-600 to-red-700 bg-clip-text text-transparent">
+                  <h1 className="text-lg font-bold text-slate-900 tracking-tight">
                     ResQNet Police
                   </h1>
-                  <p className="text-xs text-gray-600 font-medium">
+                  <p className="text-[11px] text-slate-500 font-medium tracking-wide uppercase">
                     Emergency Response
                   </p>
                 </div>
               </div>
-              <div className="w-9 h-9 bg-gradient-to-br from-red-600 to-red-700 text-white rounded-lg flex items-center justify-center font-bold text-sm shadow-md">
+              <div className="w-8 h-8 bg-slate-900 text-white rounded-lg flex items-center justify-center font-semibold text-xs">
                 PC
               </div>
             </div>
-            <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-full border border-green-200 shadow-sm self-start">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-green-800 font-semibold text-xs">
-                Online · {timeNow}
+            <div className="flex items-center gap-2 px-2.5 py-1.5 bg-emerald-50 rounded-md border border-emerald-200 self-start">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-emerald-700 font-mono text-xs font-medium">
+                LIVE {timeNow}
               </span>
             </div>
           </div>
 
-          {/* Desktop Layout */}
+          {/* Desktop */}
           <div className="hidden sm:flex justify-between items-center">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 transform hover:scale-105 transition-transform">
-                <Shield className="w-7 h-7 text-white" strokeWidth={2.5} />
+              <div className="w-10 h-10 lg:w-11 lg:h-11 bg-slate-900 rounded-lg flex items-center justify-center transition-transform hover:scale-105 duration-200">
+                <Shield className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl lg:text-3xl font-black bg-gradient-to-r from-indigo-600 to-indigo-800 bg-clip-text text-transparent">
+                <h1 className="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight">
                   ResQNet Police
                 </h1>
-                <p className="text-xs lg:text-sm text-gray-600 font-medium">
-                  Emergency Response · Help Citizens in Need
+                <p className="text-xs text-slate-500 font-medium tracking-wide uppercase">
+                  Emergency Response Dashboard
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 lg:gap-5">
-              <div className="flex items-center gap-2 lg:gap-3 px-3 lg:px-5 py-2 lg:py-2.5 bg-gradient-to-r from-green-50 to-emerald-50 rounded-full border border-green-200 shadow-sm">
-                <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-green-800 font-semibold text-xs lg:text-sm">
-                  Online · {timeNow}
+            <div className="flex items-center gap-3 lg:gap-4">
+              <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 rounded-lg border border-emerald-200">
+                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                <span className="text-emerald-700 font-mono text-xs font-semibold tracking-wide">
+                  LIVE {timeNow}
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 lg:gap-3 px-3 lg:px-4 py-2 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                <div className="w-9 lg:w-11 h-9 lg:h-11 bg-gradient-to-br from-indigo-600 to-indigo-800 text-white rounded-xl flex items-center justify-center font-bold text-sm lg:text-lg shadow-md">
+              <div className="flex items-center gap-3 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200 transition-colors hover:bg-slate-100 duration-200">
+                <div className="w-8 h-8 lg:w-9 lg:h-9 bg-slate-900 text-white rounded-lg flex items-center justify-center font-semibold text-sm">
                   PC
                 </div>
                 <div className="hidden md:block">
-                  <p className="font-bold text-gray-900 text-sm">Officer John</p>
-                  <p className="text-xs text-gray-600">Police Administrator</p>
+                  <p className="font-semibold text-slate-900 text-sm leading-tight">
+                    Officer John
+                  </p>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    Police Administrator
+                  </p>
                 </div>
               </div>
             </div>
@@ -450,191 +514,246 @@ export default function PoliceDashboard() {
         </div>
       </header>
 
-      {/* ================= MAIN ================= */}
-      <main className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 max-w-[1600px] mx-auto">
-
-        {/* ========== STATS CARDS ========== */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-          <div className="bg-white rounded-xl lg:rounded-2xl shadow-lg border border-gray-100 p-4 lg:p-6 hover:shadow-xl transition-shadow">
-            <div className="flex items-center justify-between mb-2 lg:mb-3">
-              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-red-100 to-red-200 rounded-lg lg:rounded-xl flex items-center justify-center">
-                <Siren className="w-5 h-5 lg:w-6 lg:h-6 text-red-600" />
+      {/* ===== MAIN ===== */}
+      <main className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1440px] mx-auto">
+        {/* --- STATS --- */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {[
+            {
+              label: "Active Emergencies",
+              value: activeEmergencies.length,
+              icon: Siren,
+              color: "text-red-600",
+              bg: "bg-red-50",
+            },
+            {
+              label: "Critical Cases",
+              value: criticalCount,
+              icon: AlertCircle,
+              color: "text-orange-600",
+              bg: "bg-orange-50",
+            },
+            {
+              label: "Resolved Cases",
+              value: resolvedCount,
+              icon: CheckCircle,
+              color: "text-emerald-600",
+              bg: "bg-emerald-50",
+            },
+            {
+              label: "Total Cases",
+              value: emergencies.length,
+              icon: Activity,
+              color: "text-slate-700",
+              bg: "bg-slate-100",
+            },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="bg-white rounded-lg border border-slate-200 p-4 lg:p-5 transition-shadow hover:shadow-md duration-200 animate-fade-in"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div
+                  className={`w-9 h-9 lg:w-10 lg:h-10 ${stat.bg} rounded-lg flex items-center justify-center`}
+                >
+                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                </div>
+                <span className="text-2xl lg:text-3xl font-bold text-slate-900 tabular-nums font-mono">
+                  {stat.value}
+                </span>
               </div>
-              <span className="text-2xl lg:text-3xl font-black text-gray-900">{activeEmergencies.length}</span>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                {stat.label}
+              </p>
             </div>
-            <p className="text-xs lg:text-sm font-semibold text-gray-600">Active Emergencies</p>
-          </div>
-
-          <div className="bg-white rounded-xl lg:rounded-2xl shadow-lg border border-gray-100 p-4 lg:p-6 hover:shadow-xl transition-shadow">
-            <div className="flex items-center justify-between mb-2 lg:mb-3">
-              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-orange-100 to-orange-200 rounded-lg lg:rounded-xl flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 lg:w-6 lg:h-6 text-orange-600" />
-              </div>
-              <span className="text-2xl lg:text-3xl font-black text-gray-900">{criticalCount}</span>
-            </div>
-            <p className="text-xs lg:text-sm font-semibold text-gray-600">Critical Cases</p>
-          </div>
-
-          <div className="bg-white rounded-xl lg:rounded-2xl shadow-lg border border-gray-100 p-4 lg:p-6 hover:shadow-xl transition-shadow">
-            <div className="flex items-center justify-between mb-2 lg:mb-3">
-              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-green-100 to-green-200 rounded-lg lg:rounded-xl flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 lg:w-6 lg:h-6 text-green-600" />
-              </div>
-              <span className="text-2xl lg:text-3xl font-black text-gray-900">{resolvedCount}</span>
-            </div>
-            <p className="text-xs lg:text-sm font-semibold text-gray-600">Resolved Cases</p>
-          </div>
-
-          <div className="bg-white rounded-xl lg:rounded-2xl shadow-lg border border-gray-100 p-4 lg:p-6 hover:shadow-xl transition-shadow">
-            <div className="flex items-center justify-between mb-2 lg:mb-3">
-              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-lg lg:rounded-xl flex items-center justify-center">
-                <Radio className="w-5 h-5 lg:w-6 lg:h-6 text-indigo-600" />
-              </div>
-              <span className="text-2xl lg:text-3xl font-black text-gray-900">{emergencies.length}</span>
-            </div>
-            <p className="text-xs lg:text-sm font-semibold text-gray-600">Total Cases</p>
-          </div>
+          ))}
         </div>
 
-        {/* ========== LIVE EMERGENCIES ========== */}
-        <section className="bg-white rounded-xl lg:rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          <div className="px-4 sm:px-6 lg:px-8 py-4 lg:py-6 bg-gradient-to-r from-red-50 to-orange-100 border-b border-red-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
-            <div className="flex items-center gap-2 lg:gap-3">
-              <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-red-500 to-red-700 rounded-lg lg:rounded-xl flex items-center justify-center shadow-lg">
-                <Siren className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
+        {/* --- LIVE EMERGENCIES --- */}
+        <section className="bg-white rounded-lg border border-slate-200 overflow-hidden animate-fade-in">
+          <div className="px-4 sm:px-6 lg:px-8 py-4 lg:py-5 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 lg:w-9 lg:h-9 bg-red-600 rounded-lg flex items-center justify-center">
+                <Siren className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
               </div>
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-gray-900">
-                Live Emergency Alerts
-              </h2>
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                  Live Emergency Alerts
+                </h2>
+                <p className="text-[11px] text-slate-500 font-medium tracking-wide uppercase hidden sm:block">
+                  Real-time incident monitoring
+                </p>
+              </div>
             </div>
-            <span className="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 sm:px-4 lg:px-5 py-1.5 lg:py-2 rounded-full text-sm font-bold shadow-lg">
+            <span className="bg-red-600 text-white px-3 py-1.5 rounded-md text-xs font-semibold tabular-nums">
               {activeEmergencies.length} Active
             </span>
           </div>
 
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-slate-100">
             {loading ? (
-              <div className="p-8 text-center text-gray-500">Loading emergencies...</div>
+              <div className="p-12 flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-2 border-slate-300 border-t-slate-900 rounded-full animate-spin" />
+                <p className="text-sm text-slate-500 font-medium">
+                  Loading emergencies...
+                </p>
+              </div>
             ) : emergencies.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">No emergencies at this time</div>
+              <div className="p-12 flex flex-col items-center gap-2">
+                <CheckCircle className="w-10 h-10 text-emerald-300" />
+                <p className="text-sm text-slate-500 font-medium">
+                  No emergencies at this time
+                </p>
+              </div>
             ) : (
-              emergencies.map((e, index) => (
+              emergencies.map((e) => (
                 <div
                   key={e.id}
                   onClick={() => viewLocation(e)}
-                  className={`p-4 sm:p-6 lg:p-8 cursor-pointer hover:bg-gradient-to-r hover:from-gray-50 hover:to-transparent transition-all duration-200 ${selected?.id === e.id ? "bg-gradient-to-r from-indigo-50 to-transparent border-l-4 border-indigo-500" : ""
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(ev) => {
+                    if (ev.key === "Enter" || ev.key === " ") viewLocation(e)
+                  }}
+                  className={`p-4 sm:p-5 lg:p-6 cursor-pointer transition-all duration-200 group
+                    ${
+                      selected?.id === e.id
+                        ? "bg-slate-50 border-l-[3px] border-l-slate-900"
+                        : "hover:bg-slate-50/60 border-l-[3px] border-l-transparent"
                     }`}
-                  style={{ animationDelay: `${index * 100}ms` }}
                 >
                   <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 mb-4">
-                    <div className="flex items-start gap-3 lg:gap-4 flex-1">
-                      <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl lg:rounded-2xl flex items-center justify-center border border-gray-200 shadow-sm flex-shrink-0">
-                        <AlertCircle className={`w-6 h-6 lg:w-7 lg:h-7 ${e.emergency_level === 'critical' ? 'text-red-600' :
-                          e.emergency_level === 'high' ? 'text-orange-600' :
-                            e.emergency_level === 'medium' ? 'text-yellow-600' : 'text-blue-600'
-                          }`} />
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      {/* Level indicator dot */}
+                      <div className="mt-2 shrink-0">
+                        <span
+                          className={`block w-3 h-3 rounded-full ${getLevelDot(e.emergency_level)} ${e.emergency_level === "critical" ? "animate-pulse" : ""}`}
+                        />
                       </div>
+
                       <div className="flex-1 min-w-0">
-                        <p className="font-black text-base sm:text-lg lg:text-xl text-gray-900 mb-2">
-                          {e.emergency_type || 'Emergency Alert'}
-                        </p>
-                        <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <p className="font-semibold text-sm sm:text-base text-slate-900 tracking-tight truncate">
+                            {e.emergency_type || "Emergency Alert"}
+                          </p>
+                          <ChevronRight className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 shrink-0" />
+                        </div>
+                        <div className="space-y-1">
                           {e.name && (
-                            <div className="flex items-center gap-2 text-gray-700">
-                              <Eye className="w-4 h-4 flex-shrink-0 text-gray-500" />
-                              <p className="text-xs sm:text-sm font-semibold truncate">{e.name}</p>
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <Eye className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                              <p className="text-xs font-medium truncate">
+                                {e.name}
+                              </p>
                             </div>
                           )}
                           {e.phone_number && (
-                            <div className="flex items-center gap-2 text-gray-700">
-                              <Phone className="w-4 h-4 flex-shrink-0 text-gray-500" />
-                              <p className="text-xs sm:text-sm font-semibold truncate">{e.phone_number}</p>
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <Phone className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                              <p className="text-xs font-mono font-medium truncate">
+                                {e.phone_number}
+                              </p>
                             </div>
                           )}
-                          <div className="flex items-center gap-2 text-gray-700">
-                            <MapPin className="w-4 h-4 flex-shrink-0 text-gray-500" />
-                            <p className="text-xs sm:text-sm font-semibold truncate">
-                              {e.location_text || `${e.latitude.toFixed(4)}, ${e.longitude.toFixed(4)}`}
+                          <div className="flex items-center gap-2 text-slate-600">
+                            <MapPin className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                            <p className="text-xs font-medium truncate">
+                              {e.location_text ||
+                                `${e.latitude.toFixed(4)}, ${e.longitude.toFixed(4)}`}
                             </p>
                           </div>
                           {e.assigned_hospital_name && (
-                            <div className="flex items-center gap-2 text-blue-700">
-                              <Hospital className="w-4 h-4 flex-shrink-0 text-blue-500" />
-                              <p className="text-xs sm:text-sm font-semibold truncate">{e.assigned_hospital_name}</p>
+                            <div className="flex items-center gap-2 text-blue-600">
+                              <Hospital className="w-3.5 h-3.5 shrink-0 text-blue-400" />
+                              <p className="text-xs font-medium truncate">
+                                {e.assigned_hospital_name}
+                              </p>
                             </div>
                           )}
-                          <div className="flex items-center gap-2 text-gray-500">
-                            <Clock className="w-3 h-3 flex-shrink-0" />
-                            <p className="text-xs font-medium">{getTimeAgo(e.created_at)}</p>
+                          <div className="flex items-center gap-2 text-slate-400">
+                            <Clock className="w-3 h-3 shrink-0" />
+                            <p className="text-[11px] font-medium">
+                              {getTimeAgo(e.created_at)}
+                            </p>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-2">
-                      <span className={`px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 lg:py-2.5 rounded-lg lg:rounded-xl text-xs sm:text-sm font-black whitespace-nowrap flex-shrink-0 uppercase ${getPriorityStyles(e.emergency_level)}`}>
+                    <div className="flex items-center sm:flex-col gap-2">
+                      <span
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider ${getLevelStyles(e.emergency_level)}`}
+                      >
                         {e.emergency_level}
                       </span>
-                      <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-semibold text-center">
-                        {e.status}
+                      <span
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-medium border capitalize ${getStatusStyles(e.status)}`}
+                      >
+                        {e.status.replace("_", " ")}
                       </span>
                     </div>
                   </div>
 
-                  {/* ACTIONS */}
-                  {['pending', 'acknowledged', 'in_progress'].includes(e.status) && (
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                  {/* Action Buttons */}
+                  {["pending", "acknowledged", "in_progress"].includes(
+                    e.status
+                  ) && (
+                    <div className="flex flex-wrap gap-2 mt-1">
                       <button
+                        type="button"
                         onClick={(ev) => {
-                          ev.stopPropagation();
-                          viewLocation(e);
+                          ev.stopPropagation()
+                          viewLocation(e)
                         }}
-                        className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg lg:rounded-xl text-sm font-bold shadow-lg shadow-blue-200 hover:shadow-xl transform hover:scale-105 transition-all"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 text-white rounded-md text-xs font-medium transition-all duration-200 hover:bg-slate-800 active:scale-[0.98]"
                       >
-                        <MapPin className="w-4 h-4" />
-                        <span>View Route</span>
+                        <MapPin className="w-3.5 h-3.5" />
+                        View Route
                       </button>
-                      {e.status === 'pending' && (
+                      {e.status === "pending" && (
                         <button
+                          type="button"
                           onClick={(ev) => {
-                            ev.stopPropagation();
-                            markAcknowledged(e.id);
+                            ev.stopPropagation()
+                            markAcknowledged(e.id)
                           }}
-                          className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg lg:rounded-xl text-sm font-bold shadow-lg shadow-green-200 hover:shadow-xl transform hover:scale-105 transition-all"
+                          className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-md text-xs font-medium transition-all duration-200 hover:bg-emerald-700 active:scale-[0.98]"
                         >
-                          <CheckCircle className="w-4 h-4" />
-                          <span>Acknowledge</span>
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          Acknowledge
                         </button>
                       )}
-                      {e.status === 'acknowledged' && (
+                      {e.status === "acknowledged" && (
                         <button
+                          type="button"
                           onClick={(ev) => {
-                            ev.stopPropagation();
-                            markInProgress(e.id);
+                            ev.stopPropagation()
+                            markInProgress(e.id)
                           }}
-                          className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-lg lg:rounded-xl text-sm font-bold shadow-lg shadow-orange-200 hover:shadow-xl transform hover:scale-105 transition-all"
+                          className="flex items-center gap-1.5 px-3 py-2 bg-amber-600 text-white rounded-md text-xs font-medium transition-all duration-200 hover:bg-amber-700 active:scale-[0.98]"
                         >
-                          <Radio className="w-4 h-4" />
-                          <span>En Route</span>
+                          <Radio className="w-3.5 h-3.5" />
+                          En Route
                         </button>
                       )}
                       <button
+                        type="button"
                         onClick={(ev) => {
-                          ev.stopPropagation();
-                          markResolved(e.id);
+                          ev.stopPropagation()
+                          markResolved(e.id)
                         }}
-                        className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700 text-white rounded-lg lg:rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-white text-slate-700 border border-slate-300 rounded-md text-xs font-medium transition-all duration-200 hover:bg-slate-50 hover:border-slate-400 active:scale-[0.98]"
                       >
-                        <CheckCircle className="w-4 h-4" />
-                        <span>Mark Resolved</span>
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        Resolve
                       </button>
                     </div>
                   )}
 
-                  {e.status === 'resolved' && (
-                    <div className="flex items-center gap-2 lg:gap-3 px-4 sm:px-5 lg:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-green-100 to-emerald-100 rounded-lg lg:rounded-xl border-2 border-green-300 shadow-md">
-                      <CheckCircle className="w-5 h-5 lg:w-6 lg:h-6 text-green-700 flex-shrink-0" />
-                      <p className="font-black text-xs sm:text-sm text-green-800">
+                  {e.status === "resolved" && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 rounded-md border border-emerald-200 mt-1">
+                      <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <p className="text-xs font-medium text-emerald-700">
                         Emergency Resolved
                       </p>
                     </div>
@@ -645,93 +764,116 @@ export default function PoliceDashboard() {
           </div>
         </section>
 
-        {/* ========== MAP SECTION ========== */}
+        {/* --- MAP SECTION --- */}
         {selected && (
-          <section id="location-map-section" className="bg-white rounded-xl lg:rounded-2xl shadow-xl border border-gray-100 p-4 sm:p-6 lg:p-8">
-            <div className="flex flex-col gap-4 mb-4 lg:mb-6">
-              <div className="flex items-center gap-2 lg:gap-3">
-                <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-blue-500 to-indigo-700 rounded-lg lg:rounded-xl flex items-center justify-center shadow-lg">
-                  <MapPin className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
+          <section
+            id="location-map-section"
+            className="bg-white rounded-lg border border-slate-200 p-4 sm:p-6 lg:p-8 animate-scale-in"
+          >
+            <div className="flex flex-col gap-4 mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 lg:w-9 lg:h-9 bg-slate-900 rounded-lg flex items-center justify-center">
+                  <MapPin className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
                 </div>
-                <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-gray-900">
-                  Emergency Location & Route
-                </h2>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                    Incident Details
+                  </h2>
+                  <p className="text-[11px] text-slate-500 font-medium tracking-wide uppercase">
+                    Location & route information
+                  </p>
+                </div>
               </div>
 
-              {/* Location Info Card */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border-2 border-blue-200">
-                <div className="space-y-3">
+              {/* Location Info */}
+              <div className="bg-slate-50 rounded-lg p-4 lg:p-5 border border-slate-200">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <p className="text-xs font-semibold text-gray-600 mb-1">INCIDENT LOCATION</p>
-                    <p className="font-bold text-gray-900 text-lg">{selected.emergency_type || 'Emergency'}</p>
-                    <p className="text-sm text-gray-700 flex items-center gap-1 mt-1">
-                      <MapPin className="w-3 h-3" />
-                      {selected.location_text || `${selected.latitude.toFixed(6)}, ${selected.longitude.toFixed(6)}`}
+                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                      Incident Type
+                    </p>
+                    <p className="font-semibold text-slate-900">
+                      {selected.emergency_type || "Emergency"}
+                    </p>
+                    <p className="text-sm text-slate-600 flex items-center gap-1.5 mt-1">
+                      <MapPin className="w-3 h-3 text-slate-400" />
+                      {selected.location_text ||
+                        `${selected.latitude.toFixed(6)}, ${selected.longitude.toFixed(6)}`}
                     </p>
                   </div>
 
-                  {/* Patient Contact */}
                   {selected.phone_number && (
-                    <div className="pt-2 border-t border-blue-200">
-                      <p className="text-xs font-semibold text-gray-600 mb-1">PATIENT CONTACT</p>
+                    <div>
+                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                        Caller Contact
+                      </p>
                       <a
                         href={`tel:${selected.phone_number}`}
-                        className="text-blue-700 font-bold text-lg hover:text-blue-900 flex items-center gap-2"
+                        className="text-slate-900 font-semibold flex items-center gap-1.5 transition-colors duration-200 hover:text-blue-600"
                       >
-                        <Phone className="w-4 h-4" />
+                        <Phone className="w-3.5 h-3.5" />
                         {selected.phone_number}
                       </a>
                       {selected.name && (
-                        <p className="text-sm text-gray-700 mt-1">{selected.name}</p>
+                        <p className="text-sm text-slate-600 mt-0.5">
+                          {selected.name}
+                        </p>
                       )}
                     </div>
                   )}
 
-                  {/* Hospital Info */}
                   {assignedHospital && (
-                    <div className="pt-2 border-t border-blue-200">
-                      <p className="text-xs font-semibold text-gray-600 mb-1">ASSIGNED HOSPITAL</p>
-                      <div className="flex items-center gap-2 mb-1">
-                        <Hospital className="w-4 h-4 text-blue-600" />
-                        <p className="font-bold text-gray-900 text-lg">{assignedHospital.name}</p>
+                    <div>
+                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                        Assigned Hospital
+                      </p>
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <Hospital className="w-3.5 h-3.5 text-blue-500" />
+                        <p className="font-semibold text-slate-900">
+                          {assignedHospital.name}
+                        </p>
                       </div>
-                      {assignedHospital.latitude && assignedHospital.longitude && (
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <Navigation className="w-3 h-3" />
-                          <span>Distance: </span>
-                          <span className="font-bold text-blue-700">
-                            {calculateDistance(
-                              selected.latitude,
-                              selected.longitude,
-                              assignedHospital.latitude,
-                              assignedHospital.longitude
-                            )}
-                          </span>
-                        </div>
-                      )}
+                      {assignedHospital.latitude &&
+                        assignedHospital.longitude && (
+                          <p className="text-sm text-slate-600 flex items-center gap-1.5">
+                            <Navigation className="w-3 h-3 text-slate-400" />
+                            Distance:{" "}
+                            <span className="font-semibold text-slate-900">
+                              {calculateDistance(
+                                selected.latitude,
+                                selected.longitude,
+                                assignedHospital.latitude,
+                                assignedHospital.longitude
+                              )}
+                            </span>
+                          </p>
+                        )}
                     </div>
                   )}
 
                   {selected.description && (
-                    <div className="pt-2 border-t border-blue-200">
-                      <p className="text-xs font-semibold text-gray-600">Description:</p>
-                      <p className="text-sm text-gray-700 mt-1">{selected.description}</p>
+                    <div className="sm:col-span-2">
+                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                        Description
+                      </p>
+                      <p className="text-sm text-slate-700 leading-relaxed">
+                        {selected.description}
+                      </p>
                     </div>
                   )}
                 </div>
 
-                {/* Police Action Alert */}
-                <div className="mt-4 p-3 bg-indigo-100 border-2 border-indigo-400 rounded-lg">
-                  <p className="text-indigo-800 font-bold text-sm flex items-center gap-2">
-                    <Shield className="w-4 h-4" />
-                    🚔 Police assistance requested - Clear the route for ambulance
+                {/* Police Action */}
+                <div className="mt-4 p-3 bg-slate-900 rounded-lg flex items-center gap-2.5">
+                  <Shield className="w-4 h-4 text-white shrink-0" />
+                  <p className="text-white text-xs font-medium tracking-wide">
+                    Police assistance requested -- Clear the route for ambulance
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-xl lg:rounded-2xl overflow-hidden border-2 border-gray-200 shadow-lg">
-
+            <div className="rounded-lg overflow-hidden border border-slate-200">
               <EmergencyRouteMap
                 emergencyLat={selected.latitude}
                 emergencyLng={selected.longitude}
@@ -742,8 +884,7 @@ export default function PoliceDashboard() {
             </div>
           </section>
         )}
-
       </main>
     </div>
-  );
+  )
 }

@@ -132,7 +132,7 @@ export async function PATCH(request: NextRequest) {
             );
         }
 
-        const updates: any = {
+        const updates: Record<string, string> = {
             updated_at: new Date().toISOString(),
         };
 

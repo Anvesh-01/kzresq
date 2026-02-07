@@ -622,7 +622,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Activity, Ambulance, Clock, AlertCircle, CheckCircle, MapPin, Phone, Hospital as HospitalIcon, Calendar, User, X, FileText } from 'lucide-react';
+import { Activity, Ambulance, Clock, AlertCircle, CheckCircle, MapPin, Phone, Calendar, User, X, FileText } from 'lucide-react';
 import { getHospitalSession, clearHospitalSession, type HospitalSession } from '@/lib/auth';
 
 type AmbulanceType = {
@@ -680,7 +680,13 @@ type Appointment = {
 
 export default function HospitalDashboard() {
   const router = useRouter();
-  const [hospitalInfo, setHospitalInfo] = useState<HospitalSession | null>(null);
+  const [hospitalInfo, setHospitalInfo] = useState<HospitalSession | null>(() => {
+    // Initialize with session data if available (client-side only)
+    if (typeof window !== 'undefined') {
+      return getHospitalSession();
+    }
+    return null;
+  });
   const [emergencies, setEmergencies] = useState<SOSEmergency[]>([]);
   const [ambulances, setAmbulances] = useState<AmbulanceType[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -734,10 +740,15 @@ export default function HospitalDashboard() {
   useEffect(() => {
     if (!hospitalInfo) return;
 
+    // Initial fetch
     fetchAppointments();
-    const interval = setInterval(fetchAppointments, 5000);
+    // Set up polling
+    const interval = setInterval(() => {
+      fetchAppointments();
+    }, 5000);
     return () => clearInterval(interval);
-  }, [hospitalInfo, fetchAppointments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hospitalInfo]);
 
   const openApproveModal = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
@@ -812,10 +823,9 @@ export default function HospitalDashboard() {
     const session = getHospitalSession();
     if (!session) {
       router.push('/login');
-      return;
     }
-    setHospitalInfo(session);
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Fetch emergencies specific to this hospital
   const fetchEmergencies = useCallback(async () => {
@@ -838,10 +848,15 @@ export default function HospitalDashboard() {
   useEffect(() => {
     if (!hospitalInfo) return;
 
+    // Initial fetch
     fetchEmergencies();
-    const interval = setInterval(fetchEmergencies, 3000); // Poll every 3 seconds
+    // Set up polling
+    const interval = setInterval(() => {
+      fetchEmergencies();
+    }, 3000);
     return () => clearInterval(interval);
-  }, [hospitalInfo, fetchEmergencies]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hospitalInfo]);
 
   // Fetch ambulances for this hospital
   const fetchAmbulances = useCallback(async () => {
@@ -862,10 +877,15 @@ export default function HospitalDashboard() {
   useEffect(() => {
     if (!hospitalInfo) return;
 
+    // Initial fetch
     fetchAmbulances();
-    const interval = setInterval(fetchAmbulances, 10000);
+    // Set up polling
+    const interval = setInterval(() => {
+      fetchAmbulances();
+    }, 10000);
     return () => clearInterval(interval);
-  }, [hospitalInfo, fetchAmbulances]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hospitalInfo]);
 
   useEffect(() => {
     const timer = setInterval(() => {
