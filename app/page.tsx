@@ -65,7 +65,7 @@ export default function LandingPage() {
             </div>
 
             <button
-              onClick={() => router.push("/sos")}
+              onClick={() => router.push("/user/sos")}
               className="w-full h-32 gradient-bg-emergency text-white text-3xl font-bold rounded-2xl shadow-lg hover:shadow-xl active:scale-95 transition-all duration-200 animate-emergency-pulse mb-4 flex items-center justify-center gap-3"
             >
               <Zap className="w-10 h-10" />

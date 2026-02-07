@@ -34,11 +34,11 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        console.log('✅ Hospital found:', { id: hospital.id, name: hospital.name, hasPasswordHash: !!hospital.password_hash })
+        console.log('✅ Hospital found:', { id: hospital.id, name: hospital.name, hasPasswordHash: !!hospital.password })
 
         // Check if password hash exists
-        if (!hospital.password_hash) {
-            console.error('❌ Hospital password_hash is missing:', { username, hospitalId: hospital.id })
+        if (!hospital.password) {
+            console.error('❌ Hospital password hash is missing:', { username, hospitalId: hospital.id })
             return NextResponse.json(
                 { success: false, error: 'Account setup incomplete. Please contact administrator.' },
                 { status: 500 }
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
         // Verify password
         console.log('🔍 Verifying password...')
-        const isValid = await verifyPassword(password, hospital.password_hash)
+        const isValid = await verifyPassword(password, hospital.password)
         console.log('🔍 Password verification result:', isValid)
 
         if (!isValid) {
@@ -66,8 +66,8 @@ export async function POST(request: NextRequest) {
             .update({ last_login: new Date().toISOString() })
             .eq('id', hospital.id)
 
-        // Return hospital data (excluding password_hash)
-        const { password_hash: _password_hash, ...hospitalData } = hospital
+        // Return hospital data (excluding password hash)
+        const { password: _password, ...hospitalData } = hospital
 
         return NextResponse.json(
             {
