@@ -20,12 +20,14 @@ import {
   Search,
   Filter,
   Shield,
-  Droplet
+  Droplet,
+  Languages
 } from "lucide-react";
 import AmbulanceAssignmentMap from '@/components/AmbulanceAssignmentMap';
 import { getHospitalSession, clearHospitalSession } from '@/lib/auth-client';
 import type { HospitalSession } from '@/lib/auth';
 import dynamic from 'next/dynamic';
+import { useLanguage } from "@/components/LanguageContext";
 
 const LiveTrackingMap = dynamic(() => import('@/components/LiveTrackingMap'), {
   ssr: false,
@@ -103,6 +105,7 @@ const AMBULANCE_LOCATION_POLL_INTERVAL = 3000; // 3 seconds
 
 export default function HospitalDashboard() {
   const router = useRouter();
+  const { t, language, setLanguage } = useLanguage();
   const [hospitalInfo, setHospitalInfo] = useState<HospitalSession | null>(null);
   const [emergencies, setEmergencies] = useState<SOSEmergency[]>([]);
   const [ambulances, setAmbulances] = useState<AmbulanceType[]>([]);
@@ -772,6 +775,14 @@ export default function HospitalDashboard() {
                   </div>
                 )}
                 <button
+                  onClick={() => setLanguage(language === 'en' ? 'ml' : 'en')}
+                  className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-emerald-600 font-medium transition-colors"
+                  title={language === 'en' ? 'Switch to Malayalam' : 'Switch to English'}
+                >
+                  <Languages className="w-5 h-5" />
+                  <span>{language === 'en' ? 'മലയാളം' : 'English'}</span>
+                </button>
+                <button
                   onClick={handleLogout}
                   className="group flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gray-950 hover:bg-red-600 text-white rounded-2xl text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-all duration-500 shadow-xl shadow-gray-950/10 hover:shadow-red-950/20 active:scale-95"
                 >
@@ -856,22 +867,22 @@ export default function HospitalDashboard() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-[0.2em]">Live Feed</span>
+                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-[0.2em]">{t('hospital.liveFeed')}</span>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tightest">
-                  PRIORITY <span className="text-emerald-500">ALERTS</span>
+                  {t('hospital.priorityAlerts')}
                 </h2>
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 opacity-60">Emergency Surveillance & Response</p>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 opacity-60">{t('hospital.emergencySurveillance')}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-4 relative z-10 shrink-0">
               <div className="hidden xs:flex flex-col items-end mr-2">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Queue Status</p>
-                <p className="text-xs font-bold text-emerald-400 uppercase tracking-tighter">Normal Load</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">{t('hospital.queueStatus')}</p>
+                <p className="text-xs font-bold text-emerald-400 uppercase tracking-tighter">{t('hospital.normalLoad')}</p>
               </div>
               <div className="bg-emerald-500/10 backdrop-blur-xl px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl text-emerald-400 text-[10px] sm:text-xs font-bold border border-emerald-500/20 tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-                {emergencies.length} ACTIVE
+                {emergencies.length} {t('hospital.active')}
               </div>
             </div>
           </div>
@@ -880,7 +891,7 @@ export default function HospitalDashboard() {
             {isLoading ? (
               <div className="p-8 text-center flex flex-col items-center justify-center gap-4">
                 <div className="w-12 h-12 border-4 border-emerald-50 border-t-emerald-600 rounded-full animate-spin"></div>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Hydrating data...</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t('hospital.hydrating')}</p>
               </div>
             ) : emergencies.length === 0 ? (
               <div className="p-12 text-center">
@@ -893,9 +904,9 @@ export default function HospitalDashboard() {
                       className="object-contain"
                     />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 tracking-tight">No Active Emergencies</h3>
+                  <h3 className="text-xl font-bold text-gray-900 tracking-tight">{t('hospital.noEmergencies')}</h3>
                 </div>
-                <p className="text-sm text-gray-400 font-bold max-w-xs mx-auto">New alerts will ripple through the system the moment they are triggered.</p>
+                <p className="text-sm text-gray-400 font-bold max-w-xs mx-auto">{t('hospital.noEmergenciesDesc')}</p>
               </div>
             ) : (
               emergencies.map((emergency) => {
@@ -925,11 +936,11 @@ export default function HospitalDashboard() {
                         <div className="flex-1 overflow-hidden">
                           <div className="flex flex-wrap items-center gap-2 mb-1">
                             <h3 className="font-bold text-base sm:text-lg text-gray-900 tracking-tight">
-                              {emergency.name || 'Anonymous Patient'}
+                              {emergency.name || t('hospital.anonymous')}
                             </h3>
                             {emergency.ai_score && (
                               <span className="bg-emerald-500 text-white text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm">
-                                {emergency.ai_score}% Match
+                                {emergency.ai_score}% {t('hospital.match')}
                               </span>
                             )}
                           </div>
@@ -972,7 +983,7 @@ export default function HospitalDashboard() {
                                   <Activity className="w-3.5 h-3.5 text-emerald-600" />
                                 </div>
                                 <div>
-                                  <p className="text-[8px] font-bold text-emerald-600 uppercase tracking-widest leading-none mb-0.5">Blood</p>
+                                  <p className="text-[8px] font-bold text-emerald-600 uppercase tracking-widest leading-none mb-0.5">{t('hospital.blood')}</p>
                                   <p className="text-[10px] font-bold text-gray-900 uppercase tracking-widest">{emergency.blood_group}</p>
                                 </div>
                               </div>
@@ -983,7 +994,7 @@ export default function HospitalDashboard() {
                                   <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
                                 </div>
                                 <div>
-                                  <p className="text-[8px] font-bold text-amber-600 uppercase tracking-widest leading-none mb-0.5">Allergies</p>
+                                  <p className="text-[8px] font-bold text-amber-600 uppercase tracking-widest leading-none mb-0.5">{t('hospital.allergies')}</p>
                                   <p className="text-[10px] font-bold text-gray-900 uppercase tracking-widest truncate max-w-[100px]">{emergency.allergies}</p>
                                 </div>
                               </div>
@@ -994,7 +1005,7 @@ export default function HospitalDashboard() {
                                   <FileText className="w-3.5 h-3.5 text-slate-600" />
                                 </div>
                                 <div>
-                                  <p className="text-[8px] font-bold text-slate-600 uppercase tracking-widest leading-none mb-0.5">Clinical</p>
+                                  <p className="text-[8px] font-bold text-slate-600 uppercase tracking-widest leading-none mb-0.5">{t('hospital.clinical')}</p>
                                   <p className="text-[10px] font-bold text-gray-900 uppercase tracking-widest truncate max-w-[100px]">{emergency.medical_conditions}</p>
                                 </div>
                               </div>
@@ -1014,7 +1025,7 @@ export default function HospitalDashboard() {
                                   <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                                     <Ambulance className="w-4 h-4 text-green-600" />
                                   </div>
-                                  <span className="font-bold text-sm text-green-900 uppercase tracking-wider">Live Tracking: {emergency.assigned_ambulance_number}</span>
+                                  <span className="font-bold text-sm text-green-900 uppercase tracking-wider">{t('hospital.liveTracking')}: {emergency.assigned_ambulance_number}</span>
                                 </div>
                                 <button
                                   onClick={(e) => {
@@ -1023,7 +1034,7 @@ export default function HospitalDashboard() {
                                   }}
                                   className="bg-white hover:bg-red-50 text-red-600 px-3 py-1 rounded-lg text-xs font-bold border border-red-200 transition-colors shadow-sm"
                                 >
-                                  ✕ Stop
+                                  ✕ {t('hospital.stop')}
                                 </button>
                               </div>
 
@@ -1039,18 +1050,18 @@ export default function HospitalDashboard() {
 
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-white p-2 rounded-xl border border-green-100">
-                                  <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Position</p>
+                                  <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">{t('hospital.position')}</p>
                                   <p className="text-xs text-gray-700 font-mono font-bold">
                                     {ambulanceLocation.latitude.toFixed(6)}, {ambulanceLocation.longitude.toFixed(6)}
                                   </p>
                                 </div>
                                 <div className="bg-white p-2 rounded-xl border border-green-100">
-                                  <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Status</p>
+                                  <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">{t('hospital.status')}</p>
                                   <p className="text-xs text-gray-700 font-bold flex items-center gap-1">
                                     <Clock className="w-3 h-3 text-green-500" />
                                     {ambulanceLocation.updated_at
                                       ? new Date(ambulanceLocation.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-                                      : 'Updating...'
+                                      : t('hospital.syncing')
                                     }
                                   </p>
                                 </div>
@@ -1070,7 +1081,7 @@ export default function HospitalDashboard() {
                                   <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center animate-pulse">
                                     <Ambulance className="w-4 h-4 text-blue-600" />
                                   </div>
-                                  <span className="font-bold text-sm text-blue-900 uppercase tracking-wider">Connecting to {emergency.assigned_ambulance_number}...</span>
+                                  <span className="font-bold text-sm text-blue-900 uppercase tracking-wider">{t('hospital.connecting')} {emergency.assigned_ambulance_number}...</span>
                                 </div>
                                 <button
                                   onClick={(e) => {
@@ -1079,7 +1090,7 @@ export default function HospitalDashboard() {
                                   }}
                                   className="bg-white hover:bg-red-50 text-red-600 px-3 py-1 rounded-lg text-xs font-bold border border-red-200 transition-colors shadow-sm"
                                 >
-                                  ✕ Stop
+                                  ✕ {t('hospital.stop')}
                                 </button>
                               </div>
 
@@ -1089,9 +1100,9 @@ export default function HospitalDashboard() {
                                     <Activity className="w-5 h-5 text-blue-600" />
                                   </div>
                                   <div>
-                                    <p className="text-sm font-bold text-blue-900">Waiting for GPS signal...</p>
+                                    <p className="text-sm font-bold text-blue-900">{t('hospital.waitingGPS')}</p>
                                     <p className="text-xs text-blue-700 mt-1">
-                                      The ambulance driver needs to open the ambulance app and enable location permissions.
+                                      {t('hospital.driverAppInfo')}
                                     </p>
                                   </div>
                                 </div>
@@ -1103,7 +1114,7 @@ export default function HospitalDashboard() {
                         {isAssignedToAnotherHospital && (
                           <div className="mb-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
                             <p className="text-sm font-bold text-orange-900">
-                              ⚠️ Assigned to: {emergency.assigned_hospital_name}
+                              ⚠️ {t('hospital.assignedTo')}: {emergency.assigned_hospital_name}
                             </p>
                           </div>
                         )}
@@ -1119,7 +1130,7 @@ export default function HospitalDashboard() {
                               disabled={isApproving}
                               className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-6 sm:px-8 py-2.5 rounded-xl text-[9px] sm:text-xs font-bold uppercase tracking-widest shadow-lg shadow-emerald-950/10 hover:shadow-emerald-950/20 transform hover:scale-[1.02] active:scale-95 transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed border-b-2 border-emerald-800"
                             >
-                              {isApproving ? 'Approving...' : '✓ Approve & Accept'}
+                              {isApproving ? t('hospital.approving') : `✓ ${t('hospital.approveAccept')}`}
                             </button>
                           )}
 
@@ -1133,7 +1144,7 @@ export default function HospitalDashboard() {
                                 className="w-full sm:w-auto bg-gray-900 hover:bg-black text-white px-4 sm:px-6 py-2.5 rounded-xl text-[9px] sm:text-xs font-bold uppercase tracking-widest shadow-lg shadow-gray-950/10 transition-all flex items-center justify-center gap-2 border-b-2 border-gray-950"
                               >
                                 <MapPin className="w-3.5 h-3.5" />
-                                Assign Ambulance
+                                {t('hospital.assignAmbulance')}
                               </button>
                             )}
 
@@ -1152,8 +1163,8 @@ export default function HospitalDashboard() {
                                 <Activity className={`w-4 h-4 ${trackedAmbulanceId && ambulances.find(a => a.id === trackedAmbulanceId)?.vehicle_number === emergency.assigned_ambulance_number ? "animate-spin" : ""}`} />
                                 <p>
                                   {trackedAmbulanceId && ambulances.find(a => a.id === trackedAmbulanceId)?.vehicle_number === emergency.assigned_ambulance_number
-                                    ? "Tracking Live"
-                                    : `Track: ${emergency.assigned_ambulance_number}`}
+                                    ? t('hospital.trackingLive')
+                                    : `${t('hospital.track')}: ${emergency.assigned_ambulance_number}`}
                                 </p>
                               </button>
 
@@ -1173,8 +1184,8 @@ export default function HospitalDashboard() {
                                   {requestingPoliceFor === emergency.id
                                     ? "..."
                                     : policeRequested.has(emergency.id)
-                                      ? "✓ Notified"
-                                      : "🚔 Police Assist"}
+                                      ? `✓ ${t('hospital.notified')}`
+                                      : `🚔 ${t('hospital.policeAssist')}`}
                                 </button>
                               )}
                             </div>
@@ -1206,18 +1217,18 @@ export default function HospitalDashboard() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-                  <span className="text-[10px] font-bold text-blue-500 uppercase tracking-[0.2em]">Scheduled</span>
+                  <span className="text-[10px] font-bold text-blue-500 uppercase tracking-[0.2em]">{t('hospital.scheduled')}</span>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tightest">
-                  APPOINTMENT <span className="text-blue-500">REQUESTS</span>
+                  {t('hospital.appointmentRequests')}
                 </h2>
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 opacity-60">Patient Intake Management</p>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 opacity-60">{t('hospital.patientIntake')}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-4 relative z-10 shrink-0">
               <div className="bg-blue-500/10 backdrop-blur-xl px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl text-blue-400 text-[10px] sm:text-xs font-bold border border-blue-500/20 tracking-widest shadow-[0_0_20px_rgba(59,130,246,0.1)]">
-                {appointments.length} PENDING
+                {appointments.length} {t('hospital.pending')}
               </div>
             </div>
           </div>
@@ -1234,9 +1245,9 @@ export default function HospitalDashboard() {
                       className="object-contain"
                     />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 tracking-tight">No Pending Appointments</h3>
+                  <h3 className="text-xl font-bold text-gray-900 tracking-tight">{t('hospital.noAppointments')}</h3>
                 </div>
-                <p className="text-sm text-gray-400 font-bold max-w-xs mx-auto">New appointment requests will appear here for review and approval.</p>
+                <p className="text-sm text-gray-400 font-bold max-w-xs mx-auto">{t('hospital.noAppointmentsDesc')}</p>
               </div>
             ) : (
               appointments.map((appointment) => (
@@ -1253,7 +1264,7 @@ export default function HospitalDashboard() {
                           <User className="w-6 h-6 text-blue-600" />
                         </div>
                         <div className="flex-1">
-                          <h3 className="text-lg font-bold text-gray-900 mb-1">{appointment.user_name || 'Anonymous'}</h3>
+                          <h3 className="text-lg font-bold text-gray-900 mb-1">{appointment.user_name || t('hospital.anonymous')}</h3>
                           <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
                             <span className="flex items-center gap-1">
                               <Phone className="w-3.5 h-3.5" />
@@ -1284,7 +1295,7 @@ export default function HospitalDashboard() {
                                 hour: '2-digit',
                                 minute: '2-digit'
                               })
-                              : 'Time not set'}
+                              : t('hospital.timeNotSet')}
                           </span>
                         </div>
                       </div>
@@ -1297,7 +1308,7 @@ export default function HospitalDashboard() {
 
                       {appointment.medical_conditions && (
                         <div className="pl-16 text-xs text-orange-700 bg-orange-50 p-3 rounded-xl border border-orange-100">
-                          <span className="font-bold uppercase tracking-wider">Medical Conditions:</span> {appointment.medical_conditions}
+                          <span className="font-bold uppercase tracking-wider">{t('hospital.clinical')}:</span> {appointment.medical_conditions}
                         </div>
                       )}
                     </div>
@@ -1308,14 +1319,14 @@ export default function HospitalDashboard() {
                         className="flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg shadow-emerald-950/10 transition-all hover:scale-[1.02] active:scale-95 border-b-2 border-emerald-800"
                       >
                         <CheckCircle className="w-4 h-4" />
-                        Approve
+                        {t('hospital.approveAppt')}
                       </button>
                       <button
                         onClick={() => rejectAppointment(appointment.id)}
                         className="flex items-center justify-center gap-2 px-5 py-3 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl text-xs font-bold uppercase tracking-widest border-2 border-red-200 transition-all hover:scale-[1.02] active:scale-95"
                       >
                         <X className="w-4 h-4" />
-                        Reject
+                        {t('hospital.rejectIntake')}
                       </button>
                     </div>
                   </div>
@@ -1334,9 +1345,9 @@ export default function HospitalDashboard() {
               </div>
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight underline decoration-emerald-500 decoration-4 underline-offset-8">
-                  Fleet Management
+                  {t('hospital.fleetManagement')}
                 </h2>
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">Active unit deployment</p>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">{t('hospital.fleetDesc')}</p>
               </div>
             </div>
 
@@ -1345,7 +1356,7 @@ export default function HospitalDashboard() {
               className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 sm:px-8 py-3.5 rounded-2xl text-[10px] sm:text-xs font-bold uppercase tracking-widest shadow-lg shadow-emerald-950/10 hover:shadow-emerald-950/20 transform hover:scale-[1.02] active:scale-95 transition-all duration-500 flex items-center justify-center gap-2 border-b-4 border-emerald-800"
             >
               {showForm ? <X className="w-4 h-4" /> : <Activity className="w-4 h-4" />}
-              {showForm ? 'Cancel Operation' : 'Add New Unit'}
+              {showForm ? t('hospital.cancelOp') : t('hospital.addNewUnit')}
             </button>
           </div>
 
@@ -1354,7 +1365,7 @@ export default function HospitalDashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                 <div>
                   <label htmlFor="vehicleNumber" className="text-xs font-bold text-gray-700 mb-2 block">
-                    Vehicle Number <span className="text-red-600">*</span>
+                    {t('hospital.vehicleNumber')} <span className="text-red-600">*</span>
                   </label>
                   <input
                     id="vehicleNumber"
@@ -1367,7 +1378,7 @@ export default function HospitalDashboard() {
                 </div>
                 <div>
                   <label htmlFor="driverName" className="text-xs font-bold text-gray-700 mb-2 block">
-                    Driver Name <span className="text-red-600">*</span>
+                    {t('hospital.driverName')} <span className="text-red-600">*</span>
                   </label>
                   <input
                     id="driverName"
@@ -1380,7 +1391,7 @@ export default function HospitalDashboard() {
                 </div>
                 <div>
                   <label htmlFor="driverPhone" className="text-xs font-bold text-gray-700 mb-2 block">
-                    Driver Phone <span className="text-red-600">*</span>
+                    {t('hospital.phone')} <span className="text-red-600">*</span>
                   </label>
                   <input
                     id="driverPhone"
@@ -1399,7 +1410,7 @@ export default function HospitalDashboard() {
                 className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 aria-label="Save new ambulance"
               >
-                {isAddingAmbulance ? 'Saving...' : 'Save Ambulance'}
+                {isAddingAmbulance ? t('hospital.saving') : t('hospital.save')}
               </button>
             </div>
           )}
@@ -1423,7 +1434,7 @@ export default function HospitalDashboard() {
                       ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
                       : 'bg-orange-50 text-orange-600 border-orange-100'
                       }`}>
-                      {amb.is_available ? 'Ready' : 'In SVC'}
+                      {amb.is_available ? t('hospital.ready') : t('hospital.inSvc')}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-3 pt-5 border-t border-gray-100 relative z-10">
@@ -1439,7 +1450,7 @@ export default function HospitalDashboard() {
                           : "bg-white text-emerald-600 border-emerald-100 hover:bg-emerald-50"
                           }`}
                       >
-                        {trackedAmbulanceId === amb.id ? "Live" : "Track"}
+                        {trackedAmbulanceId === amb.id ? t('hospital.trackingLive') : t('hospital.track')}
                       </button>
                     )}
                   </div>
@@ -1449,7 +1460,7 @@ export default function HospitalDashboard() {
           ) : (
             <div className="text-center py-8 text-gray-500">
               <Ambulance className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-              <p>No ambulances added yet</p>
+              <p>{t('hospital.noAmbulances')}</p>
             </div>
           )}
         </section>
