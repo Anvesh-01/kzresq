@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Ambulance, MapPin, Phone, Navigation, LogOut, CheckCircle, ChevronRight, Map as MapIcon } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
-const SimpleAmbulanceMap = dynamic(() => import('@/components/AmbulanceMap'), {
+const LiveTrackingMap = dynamic(() => import('@/components/LiveTrackingMap'), {
     ssr: false,
     loading: () => <div className="w-full h-full bg-gray-100 flex items-center justify-center">Loading Navigation Map...</div>
 });
@@ -243,25 +243,28 @@ export default function AmbulanceDashboard() {
                                 </p>
 
                                 {/* Map Integration */}
-                                <div className="h-48 rounded-xl overflow-hidden mb-4 border-2 border-gray-100 shadow-inner">
-                                    <SimpleAmbulanceMap
-                                        patientLocation={{ lat: emergency.latitude, lng: emergency.longitude }}
-                                        ambulances={ambulanceId && location ? [{
-                                            id: ambulanceId,
-                                            vehicle_number: ambulanceInfo?.vehicle_number || "Ambulance",
-                                            latitude: location.lat,
-                                            longitude: location.lng,
-                                            is_available: false
-                                        }] : []}
-                                    />
+                                <div className="h-[450px] rounded-xl overflow-hidden mb-4 border-2 border-gray-100 shadow-inner">
+                                    {location ? (
+                                        <LiveTrackingMap
+                                            latitude={location.lat}
+                                            longitude={location.lng}
+                                            destLat={emergency.status === 'in_progress' ? emergency.assigned_hospital_lat : emergency.latitude}
+                                            destLng={emergency.status === 'in_progress' ? emergency.assigned_hospital_lng : emergency.longitude}
+                                            isHospital={emergency.status === 'in_progress'}
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full bg-gray-50 flex items-center justify-center text-gray-400 text-xs">
+                                            Waiting for GPS...
+                                        </div>
+                                    )}
                                 </div>
 
                                 <button
                                     onClick={openMap}
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all mb-3 text-sm"
+                                    className="w-full bg-blue-50 text-blue-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 border border-blue-200 active:scale-95 transition-all mb-3 text-sm"
                                 >
-                                    <MapIcon className="w-5 h-5" />
-                                    {emergency.status === 'in_progress' ? 'Navigate to Hospital (Google)' : 'Start Navigation (Google Maps)'}
+                                    <Navigation className="w-5 h-5" />
+                                    {emergency.status === 'in_progress' ? 'External Navigation to Hospital' : 'External Navigation to Patient'}
                                 </button>
 
                                 {emergency.status === 'dispatched' ? (
