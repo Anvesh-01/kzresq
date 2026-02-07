@@ -2,8 +2,10 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Ambulance, MapPin, Phone, Navigation, LogOut, CheckCircle, ChevronRight, Map as MapIcon } from 'lucide-react';
+import { MapPin, Phone, Navigation, LogOut, CheckCircle, ChevronRight, Map as MapIcon, Languages } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
+import { useLanguage } from '@/components/LanguageContext';
 
 const LiveTrackingMap = dynamic(() => import('@/components/LiveTrackingMap'), {
     ssr: false,
@@ -24,6 +26,7 @@ type AssignedEmergency = {
 
 export default function AmbulanceDashboard() {
     const router = useRouter();
+    const { t, language, setLanguage } = useLanguage();
     const [emergencies, setEmergencies] = useState<AssignedEmergency[]>([]);
     const [selectedEmergencyId, setSelectedEmergencyId] = useState<string | null>(null);
     const [ambulanceId, setAmbulanceId] = useState<string | null>(null);
@@ -58,7 +61,8 @@ export default function AmbulanceDashboard() {
 
             if (data.success) {
                 // Return all active emergencies (dispatched or in_progress)
-                const activeMissions = (data.data || []).filter((e: any) => e.status === 'dispatched' || e.status === 'in_progress');
+                const emergencyList = Array.isArray(data.data) ? data.data : [];
+                const activeMissions = emergencyList.filter((e: any) => e.status === 'dispatched' || e.status === 'in_progress');
                 setEmergencies(activeMissions);
 
                 // If no mission selected, pick the first one
@@ -166,84 +170,110 @@ export default function AmbulanceDashboard() {
     if (!ambulanceId) return null; // Wait for redirect
 
     return (
-        <div className="min-h-screen bg-gray-100 pb-20">
+        <div className="min-h-screen bg-linear-to-br from-green-50 via-white to-emerald-100 pb-20">
             {/* Header */}
-            <div className="bg-white p-4 shadow-sm flex items-center justify-between sticky top-0 z-10">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                        <Ambulance className="w-6 h-6 text-red-600" />
+            <div className="bg-white/80 backdrop-blur-xl p-5 shadow-lg border-b border-white/50 flex items-center justify-between sticky top-0 z-10 animate-slide-down">
+                <div className="flex items-center gap-4">
+                    {/* Logo */}
+                    <div className="relative group cursor-pointer">
+                        <div className="absolute inset-0 bg-green-400/20 rounded-xl blur-lg group-hover:bg-green-400/40 transition-all duration-300 animate-pulse"></div>
+                        <Image
+                            src="/KenLogo1.png"
+                            alt="KEN Logo"
+                            width={50}
+                            height={50}
+                            className="rounded-xl relative z-10 shadow-md group-hover:scale-110 transition-transform duration-300"
+                        />
                     </div>
-                    <div>
-                        <h1 className="text-lg font-bold text-gray-900 leading-tight">
+                    <div className="animate-slide-right">
+                        <h1 className="text-xl font-bold text-gray-900 leading-tight hover:text-green-700 transition-colors duration-200">
                             {ambulanceInfo?.vehicle_number || 'Ambulance'}
                         </h1>
-                        <p className="text-xs text-green-600 font-medium flex items-center gap-1">
-                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                            {isTracking ? 'GPS Active' : 'GPS Inactive'}
+                        <p className="text-xs text-green-600 font-semibold flex items-center gap-1.5">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                            </span>
+                            {isTracking ? t('ambulance.gpsActive') : t('ambulance.gpsInactive')}
                         </p>
                     </div>
                 </div>
-                <button onClick={handleLogout} className="text-gray-500 hover:text-red-500">
-                    <LogOut className="w-6 h-6" />
-                </button>
+
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setLanguage(language === 'en' ? 'ml' : 'en')}
+                        className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-emerald-600 font-medium transition-colors"
+                        title={language === 'en' ? 'Switch to Malayalam' : 'Switch to English'}
+                    >
+                        <Languages className="w-5 h-5" />
+                        {language === 'en' ? 'മലയാളം' : 'English'}
+                    </button>
+                    <button
+                        onClick={handleLogout}
+                        className="text-gray-500 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all duration-200 hover:scale-110 active:scale-95 hover:shadow-md group"
+                    >
+                        <LogOut className="w-6 h-6 group-hover:rotate-12 transition-transform duration-200" />
+                    </button>
+                </div>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className="p-5 space-y-5">
                 {emergencies.length > 1 && (
                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                         {emergencies.map((e, idx) => (
                             <button
                                 key={e.id}
                                 onClick={() => setSelectedEmergencyId(e.id)}
-                                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap border-2 transition-all ${selectedEmergencyId === e.id || (!selectedEmergencyId && idx === 0)
-                                    ? 'bg-blue-600 border-blue-600 text-white shadow-md scale-105'
-                                    : 'bg-white border-gray-200 text-gray-600'
+                                className={`px-5 py-2.5 rounded-2xl text-sm font-bold whitespace-nowrap border-2 transition-all duration-300 shadow-sm hover:scale-105 active:scale-95 ${selectedEmergencyId === e.id || (!selectedEmergencyId && idx === 0)
+                                    ? 'bg-linear-to-r from-green-600 to-emerald-600 border-green-600 text-white shadow-lg scale-105 animate-pulse-subtle'
+                                    : 'bg-white/80 backdrop-blur-sm border-gray-200 text-gray-700 hover:border-green-300 hover:shadow-md hover:bg-white'
                                     }`}
                             >
-                                Mission {idx + 1}: {e.name || 'Anonymous'}
+                                {t('ambulance.mission')} {idx + 1}: {e.name || t('ambulance.anonymous')}
                             </button>
                         ))}
                     </div>
                 )}
 
                 {emergency ? (
-                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-red-500 animate-slide-up">
-                        <div className="bg-red-600 p-4 text-white flex justify-between items-center">
-                            <h2 className="font-bold text-lg flex items-center gap-2">
-                                <span className="animate-pulse">🚨</span> {emergency.status === 'in_progress' ? 'Patient Picked Up' : 'Emergency Assigned'}
+                    <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border-2 border-red-400 animate-slide-up hover:shadow-3xl transition-all duration-300 hover:scale-[1.01]">
+                        <div className={`p-5 text-white flex justify-between items-center relative overflow-hidden ${emergency.status === 'in_progress' ? 'bg-linear-to-r from-green-600 to-emerald-600' : 'bg-linear-to-r from-red-600 to-red-700'}`}>
+                            <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                            <h2 className="font-bold text-xl flex items-center gap-2 relative z-10">
+                                <span className="animate-pulse text-2xl">{emergency.status === 'in_progress' ? '✅' : '🚨'}</span> {emergency.status === 'in_progress' ? t('ambulance.patientPickedUp') : t('ambulance.emergencyAssigned')}
                             </h2>
-                            <span className="text-xs bg-red-800 px-2 py-1 rounded-full">{emergency.status === 'in_progress' ? 'IN TRANSIT' : 'CRITICAL'}</span>
+                            <span className={`text-xs backdrop-blur-sm px-3 py-1.5 rounded-full font-bold relative z-10 animate-bounce-subtle ${emergency.status === 'in_progress' ? 'bg-green-800/80' : 'bg-red-800/80'}`}>{emergency.status === 'in_progress' ? t('ambulance.inTransit') : t('ambulance.critical')}</span>
                         </div>
 
-                        <div className="p-5 space-y-4">
-                            <div>
-                                <p className="text-sm text-gray-500 mb-1">Patient Name</p>
-                                <p className="text-xl font-bold text-gray-900">{emergency.name || 'Unknown'}</p>
+                        <div className="p-6 space-y-5">
+                            <div className="bg-linear-to-r from-green-50 to-emerald-50 p-4 rounded-2xl border border-green-100 hover:shadow-md transition-all duration-300 hover:scale-[1.02] cursor-default">
+                                <p className="text-sm text-gray-600 mb-1 font-medium">{t('ambulance.patientName')}</p>
+                                <p className="text-2xl font-bold text-gray-900">{emergency.name || t('ambulance.unknown')}</p>
                             </div>
 
                             <div className="flex items-start gap-4">
-                                <a href={`tel:${emergency.phone_number}`} className="flex-1 bg-green-50 p-3 rounded-xl border border-green-200 flex items-center gap-3 active:scale-95 transition-transform">
-                                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                                        <Phone className="w-5 h-5 text-green-600" />
+                                <a href={`tel:${emergency.phone_number}`} className="flex-1 bg-green-50/80 backdrop-blur-sm p-4 rounded-2xl border-2 border-green-200 flex items-center gap-3 active:scale-95 transition-all duration-300 hover:shadow-lg hover:border-green-300 hover:bg-green-100/80 group">
+                                    <div className="w-12 h-12 bg-linear-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                                        <Phone className="w-6 h-6 text-white group-hover:animate-wiggle" />
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-500">Call Patient</p>
-                                        <p className="font-bold text-green-700">{emergency.phone_number}</p>
+                                        <p className="text-xs text-gray-600 font-medium">{t('ambulance.callPatient')}</p>
+                                        <p className="font-bold text-green-700 text-lg group-hover:text-green-800 transition-colors">{emergency.phone_number}</p>
                                     </div>
                                 </a>
                             </div>
 
-                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                <div className="flex items-center gap-2 mb-2 text-gray-500 text-sm">
-                                    <MapPin className="w-4 h-4" />
-                                    Pickup Location
+                            <div className="bg-linear-to-br from-gray-50 to-gray-100 p-5 rounded-2xl border-2 border-gray-200 shadow-inner hover:shadow-md transition-all duration-300">
+                                <div className="flex items-center gap-2 mb-3 text-gray-700 text-sm font-semibold">
+                                    <MapPin className="w-5 h-5 text-green-600 animate-bounce-subtle" />
+                                    {t('ambulance.pickupLocation')}
                                 </div>
-                                <p className="font-mono text-xs text-gray-600 mb-4 bg-white p-2 rounded border">
+                                <p className="font-mono text-sm text-gray-700 mb-4 bg-white p-3 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
                                     {emergency.latitude.toFixed(6)}, {emergency.longitude.toFixed(6)}
                                 </p>
 
                                 {/* Map Integration */}
-                                <div className="h-[450px] rounded-xl overflow-hidden mb-4 border-2 border-gray-100 shadow-inner">
+                                <div className="h-[450px] rounded-2xl overflow-hidden mb-4 border-4 border-green-500 shadow-lg hover:shadow-2xl transition-shadow duration-300">
                                     {location ? (
                                         <LiveTrackingMap
                                             latitude={location.lat}
@@ -253,55 +283,55 @@ export default function AmbulanceDashboard() {
                                             isHospital={emergency.status === 'in_progress'}
                                         />
                                     ) : (
-                                        <div className="w-full h-full bg-gray-50 flex items-center justify-center text-gray-400 text-xs">
-                                            Waiting for GPS...
+                                        <div className="w-full h-full bg-linear-to-br from-gray-50 to-gray-100 flex items-center justify-center text-gray-500 text-sm font-medium">
+                                            {t('ambulance.waitingGps')}
                                         </div>
                                     )}
                                 </div>
 
                                 <button
                                     onClick={openMap}
-                                    className="w-full bg-blue-50 text-blue-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 border border-blue-200 active:scale-95 transition-all mb-3 text-sm"
+                                    className="w-full bg-blue-50/80 backdrop-blur-sm text-blue-700 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 border-2 border-blue-200 active:scale-95 transition-all duration-300 mb-3 text-sm hover:shadow-lg hover:bg-blue-100 hover:border-blue-300 group"
                                 >
-                                    <Navigation className="w-5 h-5" />
-                                    {emergency.status === 'in_progress' ? 'External Navigation to Hospital' : 'External Navigation to Patient'}
+                                    <Navigation className="w-5 h-5 group-hover:rotate-45 transition-transform duration-300" />
+                                    {emergency.status === 'in_progress' ? t('ambulance.navHospital') : t('ambulance.navPatient')}
                                 </button>
 
                                 {emergency.status === 'dispatched' ? (
                                     <button
                                         onClick={() => updateEmergencyStatus(emergency.id, 'in_progress')}
-                                        className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
+                                        className="w-full bg-linear-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group"
                                     >
-                                        <CheckCircle className="w-5 h-5" />
-                                        Mark as Picked Up
+                                        <CheckCircle className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
+                                        {t('ambulance.markPickedUp')}
                                     </button>
                                 ) : (
                                     <button
                                         onClick={() => updateEmergencyStatus(emergency.id, 'resolved')}
-                                        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
+                                        className="w-full bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] group"
                                     >
-                                        <CheckCircle className="w-5 h-5" />
-                                        Complete Mission
+                                        <CheckCircle className="w-5 h-5 group-hover:scale-125 transition-transform duration-300" />
+                                        {t('ambulance.completeMission')}
                                     </button>
                                 )}
                             </div>
                         </div>
                     </div>
                 ) : (
-                    <div className="bg-white rounded-2xl shadow p-8 text-center border border-gray-100">
-                        <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <div className="w-3 h-3 bg-green-500 rounded-full animate-ping absolute"></div>
-                            <CheckCircle className="w-10 h-10 text-green-600 relative z-10" />
+                    <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl p-8 text-center border border-white/50 hover:shadow-3xl transition-all duration-300 animate-fade-in">
+                        <div className="w-24 h-24 bg-linear-to-br from-green-50 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-5 relative group cursor-default">
+                            <div className="w-4 h-4 bg-green-500 rounded-full animate-ping absolute"></div>
+                            <CheckCircle className="w-12 h-12 text-green-600 relative z-10 group-hover:scale-110 transition-transform duration-300" />
                         </div>
-                        <h2 className="text-xl font-bold text-gray-900 mb-2">You are Active</h2>
-                        <p className="text-gray-500 mb-6">Waiting for assignment from hospital...</p>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2 hover:text-green-700 transition-colors duration-200">{t('ambulance.youAreActive')}</h2>
+                        <p className="text-gray-600 mb-6 font-medium">{t('ambulance.waitingAssignment')}</p>
 
-                        <div className="bg-gray-50 p-4 rounded-xl text-left border border-gray-200">
-                            <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-2">My Status</p>
+                        <div className="bg-linear-to-br from-gray-50 to-gray-100 p-5 rounded-2xl text-left border-2 border-gray-200 hover:shadow-md transition-all duration-300">
+                            <p className="text-xs text-gray-600 uppercase font-bold tracking-wider mb-3">{t('ambulance.myStatus')}</p>
                             <div className="flex justify-between items-center text-sm">
-                                <span className="text-gray-600">Location Update</span>
-                                <span className="text-green-600 font-mono">
-                                    {location ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}` : 'Wait...'}
+                                <span className="text-gray-700 font-semibold">{t('ambulance.locationUpdate')}</span>
+                                <span className="text-green-600 font-mono font-bold animate-pulse-subtle">
+                                    {location ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}` : t('ambulance.wait')}
                                 </span>
                             </div>
                         </div>

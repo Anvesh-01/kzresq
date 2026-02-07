@@ -29,6 +29,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { LanguageProvider } from "@/components/LanguageContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -39,7 +41,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <LanguageProvider>
+          {children}
+        </LanguageProvider>
       </body>
     </html>
   );

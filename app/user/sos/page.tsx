@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Phone, Users, MapPin, Clock, AlertCircle, Loader2, CheckCircle, Zap, Shield, X } from "lucide-react";
 import { UserSession } from "@/lib/auth-client";
+import { useLanguage } from "@/components/LanguageContext";
 
 type Hospital = {
   id: string;
@@ -23,6 +24,7 @@ type Hospital = {
 
 export default function SOSPage() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   const [userSession, setUserSession] = useState<UserSession | null>(null);
   const [phone, setPhone] = useState("");
@@ -346,7 +348,7 @@ export default function SOSPage() {
                 />
               </div>
             </div>
-            <h1 className="-mt-7 text-4xl md:text-6xl font-extrabold text-gray-900 mb-3 tracking-tight">Emergency SOS</h1>
+            <h1 className="-mt-7 text-4xl md:text-6xl font-extrabold text-gray-900 mb-3 tracking-tight">{t('sosTitle')}</h1>
           </div>
 
           <div className={`bg-white/95 backdrop-blur-2xl rounded-3xl shadow-2xl p-8 md:p-10 border border-white/60 ${!isSplash ? 'animate-[premium-blur-in_0.8s_ease-out_0.1s_both]' : 'opacity-0'}`}>
@@ -354,13 +356,13 @@ export default function SOSPage() {
             {/* NAME INPUT (OPTIONAL) */}
             <div className="mb-6">
               <label className="block text-sm font-bold text-gray-800 mb-3 px-1">
-                Your Name <span className="text-gray-400 font-normal text-xs">(Optional)</span>
+                {t('requestingFor')} <span className="text-gray-400 font-normal text-xs">(Optional)</span>
               </label>
               <div className="relative group">
                 <Users className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-emerald-500 transition-colors w-5 h-5 z-10" />
                 <input
                   type="text"
-                  placeholder="Enter your name"
+                  placeholder={t('myself')}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 bg-gray-50/80 border-2 border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 focus:bg-white transition-all duration-200 font-medium"
@@ -389,13 +391,13 @@ export default function SOSPage() {
               {isCreatingEmergency && (
                 <div className="flex items-center gap-2 mt-3 text-emerald-600 px-1 animate-fade-in">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <p className="text-sm font-semibold">Creating emergency request...</p>
+                  <p className="text-sm font-semibold">{t('dispatching')}</p>
                 </div>
               )}
               {emergencyId && (
                 <div className="flex items-center gap-2 mt-3 px-4 py-2.5 bg-green-50 border border-green-200 rounded-xl animate-scale-in">
                   <CheckCircle className="w-5 h-5 text-green-600" />
-                  <p className="text-sm font-bold text-green-800">Emergency created successfully</p>
+                  <p className="text-sm font-bold text-green-800">{t('alertSent')}</p>
                 </div>
               )}
             </div>
@@ -479,14 +481,14 @@ export default function SOSPage() {
                     <MapPin className="w-4 h-4 text-gray-600" />
                   </div>
                   <p className="text-base font-extrabold text-gray-900">
-                    Nearby Hopsitals
+                    Nearby Hospitals
                   </p>
                   <span className="ml-auto text-xs font-bold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">
                     {hospitals.length} found
                   </span>
                 </div>
 
-                <div className="space-y-3 max-h-56 overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-4 max-h-72 overflow-y-auto pr-2 custom-scrollbar">
                   {hospitals.map((h, i) => (
                     <button
                       key={i}
@@ -496,7 +498,7 @@ export default function SOSPage() {
                         }
                         setSelectedHospital(h);
                       }}
-                      className={`w-full text-left p-4 rounded-2xl border-2 transition-all duration-200 group ${selectedHospital?.name === h.name
+                      className={`w-full text-left p-5 rounded-2xl border-2 transition-all duration-200 group ${selectedHospital?.name === h.name
                         ? "border-emerald-500 bg-gradient-to-br from-emerald-50 to-green-50 shadow-lg transform scale-[1.02]"
                         : "border-gray-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/50 hover:shadow-md"
                         }`}
@@ -541,12 +543,12 @@ export default function SOSPage() {
               {isCreatingEmergency ? (
                 <>
                   <Loader2 className="w-6 h-6 animate-spin" />
-                  Creating Emergency...
+                  {t('dispatching')}
                 </>
               ) : (
                 <>
                   <Zap className="w-6 h-6" />
-                  Send Emergency Alert
+                  {t('criticalAlert')}
                 </>
               )}
             </button>

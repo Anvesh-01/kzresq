@@ -25,6 +25,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { UserSession } from "@/lib/auth-client";
+import { useLanguage } from "@/components/LanguageContext";
 
 type Emergency = {
   id: string;
@@ -46,6 +47,7 @@ type Hospital = {
 
 export default function UserDashboard() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [userSession, setUserSession] = useState<UserSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [emergencies, setEmergencies] = useState<Emergency[]>([]);
@@ -341,7 +343,7 @@ export default function UserDashboard() {
                 />
               </div>
               <h1 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">
-                KEN Dashboard
+                {t('dashboardTitle')}
               </h1>
             </div>
 
@@ -359,7 +361,7 @@ export default function UserDashboard() {
                 className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-xl border border-red-200 transition-all duration-200"
               >
                 <LogOut className="w-5 h-5" />
-                <span className="hidden md:inline">Logout</span>
+                <span className="hidden md:inline">{t('logout')}</span>
               </button>
             </div>
           </div>
@@ -378,7 +380,7 @@ export default function UserDashboard() {
                   <p className="text-3xl font-bold text-gray-900">
                     {emergencies.filter(e => e.type === "emergency").length}
                   </p>
-                  <p className="text-sm text-gray-600">Total Emergencies</p>
+                  <p className="text-sm text-gray-600">{t('totalEmergencies')}</p>
                 </div>
               </div>
             </div>
@@ -392,7 +394,7 @@ export default function UserDashboard() {
                   <p className="text-3xl font-bold text-gray-900">
                     {emergencies.filter(e => e.type === "appointment").length}
                   </p>
-                  <p className="text-sm text-gray-600">Appointments</p>
+                  <p className="text-sm text-gray-600">{t('appointments')}</p>
                 </div>
               </div>
             </div>
@@ -407,12 +409,12 @@ export default function UserDashboard() {
                     {emergencies.filter(e => e.status === "pending").length}
                   </p>
                   <p className="text-sm text-gray-600">
-                    Pending Actions</p>
+                    {t('pendingActions')}</p>
                 </div>
               </div>
             </div>
-            <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-2 tracking-tight">Medical Assistance</h1>
-            <p className="text-gray-600 font-medium">Request appointments with nearby AI-recommended hospitals</p>
+            <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-2 tracking-tight">{t('medicalAssistance')}</h1>
+            <p className="text-gray-600 font-medium">{t('requestAppt')}</p>
           </div>
 
           {/* Quick Actions Grid */}
@@ -426,8 +428,8 @@ export default function UserDashboard() {
                 <Zap className="w-8 h-8" />
               </div>
               <div className="text-center">
-                <h3 className="font-bold text-lg">Emergency SOS</h3>
-                <p className="text-xs text-red-100 mt-1">Instant help</p>
+                <h3 className="font-bold text-lg">{t('emergencySOS')}</h3>
+                <p className="text-xs text-red-100 mt-1">{t('instantHelp')}</p>
               </div>
             </button>
 
@@ -440,8 +442,8 @@ export default function UserDashboard() {
                 <CalendarPlus className="w-8 h-8 text-emerald-600" />
               </div>
               <div className="text-center">
-                <h3 className="font-bold text-lg text-gray-900">Book Appointment</h3>
-                <p className="text-xs text-gray-600 mt-1">Schedule visit</p>
+                <h3 className="font-bold text-lg text-gray-900">{t('bookAppointment')}</h3>
+                <p className="text-xs text-gray-600 mt-1">{t('scheduleVisit')}</p>
               </div>
             </button>
 
@@ -453,8 +455,8 @@ export default function UserDashboard() {
                 <HistoryIcon className="w-8 h-8 text-blue-600" />
               </div>
               <div className="text-center">
-                <h3 className="font-bold text-lg text-gray-900">History</h3>
-                <p className="text-xs text-gray-600 mt-1">{emergencies.length} records</p>
+                <h3 className="font-bold text-lg text-gray-900">{t('history')}</h3>
+                <p className="text-xs text-gray-600 mt-1">{emergencies.length} {t('records')}</p>
               </div>
             </button>
 
@@ -467,8 +469,8 @@ export default function UserDashboard() {
                 <Settings className="w-8 h-8 text-purple-600" />
               </div>
               <div className="text-center">
-                <h3 className="font-bold text-lg text-gray-900">Settings</h3>
-                <p className="text-xs text-gray-600 mt-1">Edit profile</p>
+                <h3 className="font-bold text-lg text-gray-900">{t('settings')}</h3>
+                <p className="text-xs text-gray-600 mt-1">{t('editProfile')}</p>
               </div>
             </button>
           </div>
@@ -478,13 +480,13 @@ export default function UserDashboard() {
             <div className="lg:col-span-2 bg-white/80 backdrop-blur-xl rounded-3xl p-6 shadow-lg border border-gray-200">
               <div className="flex items-center gap-3 mb-6">
                 <HistoryIcon className="w-6 h-6 text-emerald-600" />
-                <h3 className="text-xl font-bold text-gray-900">Recent Activity</h3>
+                <h3 className="text-xl font-bold text-gray-900">{t('recentActivity')}</h3>
               </div>
 
               {emergencies.length === 0 ? (
                 <div className="text-center py-12">
                   <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No emergency or appointment history</p>
+                  <p className="text-gray-500">{t('noHistory')}</p>
                 </div>
               ) : (
                 <div className="space-y-4">

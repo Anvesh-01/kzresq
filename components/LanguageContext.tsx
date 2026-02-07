@@ -1,0 +1,380 @@
+"use client";
+
+import React, { createContext, useContext, useState, useEffect } from "react";
+
+type Language = "en" | "ml";
+
+interface LanguageContextType {
+    language: Language;
+    setLanguage: (lang: Language) => void;
+    t: (key: string) => string;
+}
+
+const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+
+export const translations = {
+    en: {
+        // Auth & Navigation
+        login: "Login",
+        signUp: "Sign Up",
+        logout: "Logout",
+        appName: "KEN",
+        appFullName: "Kozhikode Emergency Network",
+        footerCopyright: "© 2026 Kozhikode Emergency Network (KEN)",
+
+        // Landing Page
+        emergencySystem: "24/7 Emergency Response System",
+        heroTitle: "Smart Emergency Medical",
+        heroSubtitle: "Response Network",
+        emergencyQuestion: "Emergency Situation?",
+        sos: "SOS",
+        bookAppointment: "Book Appointment",
+        noLogin: "No login required",
+        gpsCapture: "GPS auto-capture • Instant hospital notification",
+        feature1Title: "Lightning Fast",
+        feature1Desc: "Instant GPS-based hospital and police coordination with automated dispatch.",
+        feature2Title: "Pre-Arrival Ready",
+        feature2Desc: "Hospitals receive patient vitals and emergency details before arrival.",
+        feature3Title: "Live Ambulance Tracking",
+        feature3Desc: "Real-time tracking of assigned ambulances with ETA and route updates.",
+        stat1Value: "<5 min",
+        stat1Label: "Average Response",
+        stat2Value: "24/7",
+        stat2Label: "Always Active",
+        stat3Value: "100+",
+        stat3Label: "Partner Hospitals",
+        stat4Value: "98%",
+        stat4Label: "Success Rate",
+        footerQuote: "Every second saves a life",
+        translateBtn: "മലയാളം",
+
+        // Dashboard
+        dashboardTitle: "KEN Dashboard",
+        medicalAssistance: "Medical Assistance",
+        requestAppt: "Request appointments with nearby AI-recommended hospitals",
+        totalEmergencies: "Total Emergencies",
+        appointments: "Appointments",
+        pendingActions: "Pending Actions",
+        emergencySOS: "Emergency SOS",
+        instantHelp: "Instant help",
+        scheduleVisit: "Schedule visit",
+        history: "History",
+        records: "records",
+        settings: "Settings",
+        editProfile: "Edit profile",
+        recentActivity: "Recent Activity",
+        noHistory: "No emergency or appointment history",
+
+        // SOS Page
+        sosTitle: "Emergency SOS",
+        sosSubtitle: "Request immediate help for yourself or others",
+        requestingFor: "Who needs help?",
+        myself: "Myself",
+        someoneElse: "Someone Else",
+        emergencyType: "Type of Emergency",
+        accident: "Accident / Trauma",
+        cardiac: "Cardiac Arrest / Chest Pain",
+        pregnancy: "Pregnancy / Labor",
+        other: "Other Medical Emergency",
+        criticalAlert: "CRITICAL ALERT",
+        alertSent: "Alert Sent Successfully!",
+        dispatching: "Dispatching Ambulance...",
+        findingHospital: "Finding Nearest Hospital...",
+        eta: "ETA",
+        ambulanceEnRoute: "Ambulance En Route",
+
+        // Emergency Status Page
+        emergencyActive: "Emergency Request Active",
+        stayCalm: "Please stay calm. Help is on the way.",
+        emergencyId: "Emergency ID",
+        currentStatus: "Current Status",
+        requestSent: "Emergency Request Sent",
+        requestRegistered: "Your emergency has been registered",
+        hospitalReview: "Hospital Review",
+        waitingApproval: "Waiting for hospital approval...",
+        approvedByHospital: "Approved by hospital",
+        ambulanceDispatched: "Ambulance Dispatched",
+        ambulanceWay: "Ambulance is on the way",
+        waitingDispatch: "Waiting for dispatch",
+        assignedHospital: "Assigned Hospital",
+        reviewingRequest: "Reviewing Request",
+        requestApproved: "Request Approved",
+        ambulanceDetails: "Ambulance Details",
+        vehicle: "Vehicle",
+        driverName: "Driver Name",
+        contactNumber: "Contact Number",
+        estimatedArrival: "Estimated Arrival Time",
+        stayLocation: "Please stay at your location",
+        routeToHospital: "Route to Hospital",
+        policeNotified: "Police Notified",
+        policeMessage: "Your location and emergency details have been shared with the nearest police control room for additional support.",
+        callDriver: "Call Ambulance Driver",
+        callEmergency: "Call Emergency (108)",
+        emergencyWarning: "In case of life-threatening emergency, call",
+        immediately: "immediately",
+
+        // Ambulance Page
+        ambulance: {
+            loadingMap: "Loading Navigation Map...",
+            gpsActive: "GPS Active",
+            gpsInactive: "GPS Inactive",
+            mission: "Mission",
+            anonymous: "Anonymous",
+            patientPickedUp: "Patient Picked Up",
+            emergencyAssigned: "Emergency Assigned",
+            inTransit: "IN TRANSIT",
+            critical: "CRITICAL",
+            patientName: "Patient Name",
+            unknown: "Unknown",
+            callPatient: "Call Patient",
+            pickupLocation: "Pickup Location",
+            waitingGps: "Waiting for GPS...",
+            navHospital: "Navigation to Hospital",
+            navPatient: "Navigation to Patient",
+            markPickedUp: "Mark as Picked Up",
+            completeMission: "Complete Mission",
+            youAreActive: "You are Active",
+            waitingAssignment: "Waiting for assignment from hospital...",
+            myStatus: "My Status",
+            locationUpdate: "Location Update",
+            wait: "Wait...",
+        },
+        // Police Page
+        police: {
+            title: "KEN Police Control",
+            subtitle: "Kozhikode Emergency Network · Traffic Management",
+            systemStatus: "System Status",
+            live: "LIVE",
+            officerOnDuty: "Officer on Duty",
+            controlRoom: "Police Control Room",
+            activeEmergencies: "Active Emergencies",
+            criticalCases: "Critical Cases",
+            resolvedToday: "Resolved Today",
+            totalRequests: "Total Requests",
+            emergencyAlerts: "Emergency Alerts",
+            realTimeTraffic: "Real-time Traffic Management",
+            active: "ACTIVE",
+            loadingRequests: "Loading emergency requests...",
+            noActive: "No active emergencies",
+            allClear: "All clear at the moment",
+            viewRoute: "View Route",
+            acknowledge: "Acknowledge",
+            markResolved: "Mark Resolved",
+            resolvedSuccess: "Emergency Successfully Resolved",
+            emergencyLocation: "Emergency Location & Route",
+            trafficManagement: "Traffic clearance management",
+            incidentDetails: "INCIDENT DETAILS",
+            patientContact: "PATIENT CONTACT",
+            destHospital: "DESTINATION HOSPITAL",
+            distance: "Distance",
+            additionalInfo: "ADDITIONAL INFORMATION",
+            priorityAlert: "PRIORITY: Clear traffic route for emergency ambulance",
+        }
+    },
+    ml: {
+        // Auth & Navigation
+        login: "ലോഗിൻ",
+        signUp: "സൈൻ അപ്പ്",
+        logout: "പുറത്തുകടക്കുക",
+        appName: "KEN",
+        appFullName: "കോഴിക്കോട് എമർജൻസി നെറ്റ്‌വർക്ക്",
+        footerCopyright: "© 2026 കോഴിക്കോട് എമർജൻസി നെറ്റ്‌വർക്ക് (KEN)",
+
+        // Landing Page
+        emergencySystem: "24/7 എമർജൻസി റെസ്പോൺസ് സിസ്റ്റം",
+        heroTitle: "സ്മാർട്ട് എമർജൻസി മെഡിക്കൽ",
+        heroSubtitle: "റെസ്പോൺസ് ശൃംഖല",
+        emergencyQuestion: "അടിയന്തിര സാഹചര്യം?",
+        sos: "SOS",
+        bookAppointment: "അപ്പോയിന്റ്മെന്റ് ബുക്ക് ചെയ്യുക",
+        noLogin: "ലോഗിൻ ആവശ്യമില്ല",
+        gpsCapture: "GPS ഓട്ടോ-ക്യാപ്‌ചർ • തൽക്ഷണ ആശുപത്രി അറിയിപ്പ്",
+        feature1Title: "മിന്നൽ വേഗത",
+        feature1Desc: "തൽക്ഷണ GPS അധിഷ്ഠിത ആശുപത്രി, പോലീസ് ഏകോപനം.",
+        feature2Title: "നേരത്തെയുള്ള തയ്യാറെടുപ്പ്",
+        feature2Desc: "രോഗി എത്തുന്നതിന് മുമ്പ് തന്നെ ആശുപത്രികൾക്ക് വിവരങ്ങൾ ലഭിക്കുന്നു.",
+        feature3Title: "ലൈവ് ആംബുലൻസ് ട്രാക്കിംഗ്",
+        feature3Desc: "ആംബുലൻസുകളുടെ തത്സമയ ട്രാക്കിംഗും സമയ വിവരങ്ങളും.",
+        stat1Value: "<5 മിനിറ്റ്",
+        stat1Label: "ശരാശരി പ്രതികരണം",
+        stat2Value: "24/7",
+        stat2Label: "എപ്പോഴും സജ്ജം",
+        stat3Value: "100+",
+        stat3Label: "പങ്കാളി ആശുപത്രികൾ",
+        stat4Value: "98%",
+        stat4Label: "വിജയശതമാനം",
+        footerQuote: "ഏറ്റവും ആവശ്യമുള്ള നിമിഷങ്ങളിൽ വേഗത്തിൽ പരിചരണം ഉറപ്പാക്കുന്നു.",
+        translateBtn: "English",
+
+        // Dashboard
+        dashboardTitle: "KEN ഡാഷ്‌ബോർഡ്",
+        medicalAssistance: "മെഡിക്കൽ സഹായം",
+        requestAppt: "അടുത്തുള്ള AI ശുപാർശ ചെയ്യുന്ന ആശുപത്രികളിൽ അപ്പോയിന്റ്മെന്റ് നേടുക",
+        totalEmergencies: "ആകെ അത്യാഹിതങ്ങൾ",
+        appointments: "അപ്പോയിന്റ്മെന്റുകൾ",
+        pendingActions: "തീർപ്പാക്കാത്തവ",
+        emergencySOS: "എമർജൻസി SOS",
+        instantHelp: "സഹായം",
+        scheduleVisit: "ബുക്ക് ചെയ്യുക",
+        history: "ചരിത്രം",
+        records: "രേഖകൾ",
+        settings: "ക്രമീകരണങ്ങൾ",
+        editProfile: "പ്രൊഫൈൽ",
+        recentActivity: "സമീപകാല പ്രവർത്തനങ്ങൾ",
+        noHistory: "ചരിത്രമൊന്നും ലഭ്യമല്ല",
+
+        // SOS Page
+        sosTitle: "എമർജൻസി SOS",
+        sosSubtitle: "നിങ്ങൾക്കോ മറ്റുള്ളവർക്കോ വേണ്ടി സഹായം അഭ്യർത്ഥിക്കുക",
+        requestingFor: "ആർക്കാണ് സഹായം വേണ്ടത്?",
+        myself: "എനിക്ക്",
+        someoneElse: "മറ്റൊരാൾക്ക്",
+        emergencyType: "അടിയന്തിര സാഹചര്യം",
+        accident: "അപകടം / ട്രോമ",
+        cardiac: "ഹൃദയാഘാതം / നെഞ്ചുവേദന",
+        pregnancy: "ഗർഭധാരണം / പ്രസവം",
+        other: "മറ്റ് അടിയന്തിര സാഹചര്യങ്ങൾ",
+        criticalAlert: "അതീവ ജാഗ്രത",
+        alertSent: "അലേർട്ട് വിജയകരമായി അയച്ചു!",
+        dispatching: "ആംബുലൻസ് അയക്കുന്നു...",
+        findingHospital: "ആശുപത്രി കണ്ടെത്തുന്നു...",
+        eta: "എത്തുന്ന സമയം",
+        ambulanceEnRoute: "ആംബുലൻസ് വരുന്നു",
+
+        // Emergency Status Page
+        emergencyActive: "അടിയന്തര അഭ്യർത്ഥന സജ്ജമാണ്",
+        stayCalm: "ദയവായി ശാന്തരായിരിക്കുക. സഹായം ഉടൻ എത്തും.",
+        emergencyId: "എമർജൻസി ഐഡി",
+        currentStatus: "ഇപ്പോഴത്തെ അവസ്ഥ",
+        requestSent: "അഭ്യർത്ഥന അയച്ചു",
+        requestRegistered: "നിങ്ങളുടെ എമർജൻസി രജിസ്റ്റർ ചെയ്തു",
+        hospitalReview: "ആശുപത്രി പരിശോധന",
+        waitingApproval: "ആശുപത്രി അംഗീകാരത്തിനായി കാത്തിരിക്കുന്നു...",
+        approvedByHospital: "ആശുപത്രി അംഗീകരിച്ചു",
+        ambulanceDispatched: "ആംബുലൻസ് പുറപ്പെട്ടു",
+        ambulanceWay: "ആംബുലൻസ് വഴിയിലാണ്",
+        waitingDispatch: "ഡിസ്പാച്ചിനായി കാത്തിരിക്കുന്നു",
+        assignedHospital: "അനുവദിച്ച ആശുപത്രി",
+        reviewingRequest: "അഭ്യർത്ഥന പരിശോധിക്കുന്നു",
+        requestApproved: "അഭ്യർത്ഥന അംഗീകരിച്ചു",
+        ambulanceDetails: "ആംബുലൻസ് വിവരങ്ങൾ",
+        vehicle: "വാഹനം",
+        driverName: "ഡ്രൈവർ പേര്",
+        contactNumber: "ഫോൺ നമ്പർ",
+        estimatedArrival: "എത്തിച്ചേരുന്ന സമയം",
+        stayLocation: "ദയവായി നിലവിലെ സ്ഥലത്ത് തുടരുക",
+        routeToHospital: "ആശുപത്രിയിലേക്കുള്ള വഴി",
+        policeNotified: "പോലീസിനെ അറിയിച്ചു",
+        policeMessage: "കൂടുതൽ സഹായത്തിനായി നിങ്ങളുടെ ലൊക്കേഷനും വിവരങ്ങളും പോലീസ് കൺട്രോൾ റൂമിലേക്ക് കൈമാറിയിട്ടുണ്ട്.",
+        callDriver: "ഡ്രൈവറെ വിളിക്കുക",
+        callEmergency: "എമർജൻസി (108)",
+        emergencyWarning: "ജീവൻ അപകടത്തിലാകുന്ന സാഹചര്യത്തിൽ, ഉടൻ",
+        immediately: "വിളിക്കുക",
+
+        // Ambulance Page
+        ambulance: {
+            loadingMap: "മാപ്പ് ലോഡുചെയ്യുന്നു...",
+            gpsActive: "GPS സജീവമാണ്",
+            gpsInactive: "GPS നിർജീവമാണ്",
+            mission: "ദൗത്യം",
+            anonymous: "അജ്ഞാതൻ",
+            patientPickedUp: "രോഗിയെ കയറ്റി",
+            emergencyAssigned: "അടിയന്തരാവസ്ഥ",
+            inTransit: "യാത്രയിലാണ്",
+            critical: "ഗുരുതരം",
+            patientName: "രോഗിയുടെ പേര്",
+            unknown: "അജ്ഞാതം",
+            callPatient: "വിളിക്കുക",
+            pickupLocation: "പിക്ക് അപ്പ് സ്ഥലം",
+            waitingGps: "GPS-നായി കാത്തിരിക്കുന്നു...",
+            navHospital: "ആശുപത്രിയിലേക്ക്",
+            navPatient: "രോഗിയുടെ അടുത്തേക്ക്",
+            markPickedUp: "പിക്കപ്പ് ചെയ്തു",
+            completeMission: "ദൗത്യം പൂർത്തിയാക്കുക",
+            youAreActive: "നിങ്ങൾ സജീവമാണ്",
+            waitingAssignment: "അസൈൻമെന്റിനായി കാത്തിരിക്കുന്നു...",
+            myStatus: "എന്റെ സ്റ്റാറ്റസ്",
+            locationUpdate: "ലൊക്കേഷൻ അപ്‌ഡേറ്റ്",
+            wait: "കാത്തിരിക്കൂ...",
+        },
+
+        // Police Page
+        police: {
+            title: "KEN പോലീസ് കൺട്രോൾ",
+            subtitle: "കോഴിക്കോട് എമർജൻസി നെറ്റ്‌വർക്ക് · ട്രാഫിക് മാനേജ്‌മെന്റ്",
+            systemStatus: "സിസ്റ്റം നില",
+            live: "ലൈവ്",
+            officerOnDuty: "ഡ്യൂട്ടിയിലുള്ള ഓഫീസർ",
+            controlRoom: "പോലീസ് കൺട്രോൾ റൂം",
+            activeEmergencies: "സജീവമായവ",
+            criticalCases: "ഗുരുതരമായവ",
+            resolvedToday: "പരിഹരിച്ചത്",
+            totalRequests: "ആകെ അഭ്യർത്ഥനകൾ",
+            emergencyAlerts: "എമർജൻസി അലേർട്ടുകൾ",
+            realTimeTraffic: "തത്സമയ ട്രാഫിക് മാനേജ്മെന്റ്",
+            active: "സജീവം",
+            loadingRequests: "എമർജൻസി അഭ്യർത്ഥനകൾ ലോഡ് ചെയ്യുന്നു...",
+            noActive: "സജീവമായ എമർജൻസികൾ ഒന്നുമില്ല",
+            allClear: "നിലവിൽ പ്രശ്നങ്ങളില്ല",
+            viewRoute: "റൂട്ട് കാണുക",
+            acknowledge: "ശ്രദ്ധയിൽപ്പെട്ടു",
+            markResolved: "പരിഹരിച്ചതായി അടയാളപ്പെടുത്തുക",
+            resolvedSuccess: "എമർജൻസി വിജയകരമായി പരിഹരിച്ചു",
+            emergencyLocation: "എമർജൻസി സ്ഥലവും റൂട്ടും",
+            trafficManagement: "ട്രാഫിക് ക്ലിയറൻസ് മാനേജ്മെന്റ്",
+            incidentDetails: "സംഭവ വിവരങ്ങൾ",
+            patientContact: "രോഗിയുടെ കോൺടാക്റ്റ്",
+            destHospital: "ലക്ഷ്യസ്ഥാനം (ആശുപത്രി)",
+            distance: "ദൂരം",
+            additionalInfo: "കൂടുതൽ വിവരങ്ങൾ",
+            priorityAlert: "മുൻഗണന: എമർജൻസി ആംബുലൻസിന് ട്രാഫിക് റൂട്ട് ക്ലിയർ ചെയ്യുക",
+        }
+    },
+};
+
+export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
+    const [language, setLanguage] = useState<Language>("en");
+
+    // Load from localStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem("app_language") as Language;
+        if (saved && (saved === "en" || saved === "ml")) {
+            setLanguage(saved);
+        }
+    }, []);
+
+    // Save to localStorage on change
+    useEffect(() => {
+        localStorage.setItem("app_language", language);
+        // document.documentElement.lang = language;
+    }, [language]);
+
+    const t = (key: string) => {
+        const keys = key.split('.');
+        let value: any = translations[language];
+
+        for (const k of keys) {
+            if (value && typeof value === 'object') {
+                value = value[k];
+            } else {
+                return key;
+            }
+        }
+
+        return value || key;
+    };
+
+    return (
+        <LanguageContext.Provider value={{ language, setLanguage, t }}>
+            {children}
+        </LanguageContext.Provider>
+    );
+};
+
+export const useLanguage = () => {
+    const context = useContext(LanguageContext);
+    if (!context) {
+        throw new Error("useLanguage must be used within a LanguageProvider");
+    }
+    return context;
+};

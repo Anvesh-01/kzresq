@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import { CheckCircle, Clock, AlertCircle, Phone, Ambulance, MapPin } from "lucide-react";
 import Image from "next/image";
+import { useLanguage } from "@/components/LanguageContext";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,7 @@ export default function EmergencyStatusPage() {
 function EmergencyStatusContent() {
   const searchParams = useSearchParams();
   const emergencyId = searchParams.get("emergencyId");
+  const { t } = useLanguage();
 
   const [emergencyData, setEmergencyData] = useState<EmergencyData | null>(null);
   const [eta, setEta] = useState<number | null>(null);
@@ -101,7 +103,7 @@ function EmergencyStatusContent() {
         return {
           icon: <Clock className="w-6 h-6 text-yellow-600" />,
           color: "yellow",
-          text: "Waiting for Hospital Approval",
+          text: t('waitingApproval'),
           bgClass: "bg-yellow-50 border-yellow-200",
           textClass: "text-yellow-800",
         };
@@ -109,7 +111,7 @@ function EmergencyStatusContent() {
         return {
           icon: <CheckCircle className="w-6 h-6 text-blue-600" />,
           color: "blue",
-          text: "Hospital Acknowledged - Preparing Ambulance",
+          text: t('approvedByHospital'),
           bgClass: "bg-blue-50 border-blue-200",
           textClass: "text-blue-800",
         };
@@ -117,7 +119,7 @@ function EmergencyStatusContent() {
         return {
           icon: <Ambulance className="w-6 h-6 text-green-600" />,
           color: "green",
-          text: "Ambulance Dispatched - On the Way",
+          text: t('ambulanceDispatched'),
           bgClass: "bg-green-50 border-green-200",
           textClass: "text-green-800",
         };
@@ -125,7 +127,7 @@ function EmergencyStatusContent() {
         return {
           icon: <Ambulance className="w-6 h-6 text-green-600" />,
           color: "green",
-          text: "Ambulance En Route to Your Location",
+          text: t('ambulanceWay'),
           bgClass: "bg-green-50 border-green-200",
           textClass: "text-green-800",
         };
@@ -191,20 +193,20 @@ function EmergencyStatusContent() {
               />
             </div>
           </div>
-          
+
           <h1 className="text-4xl font-bold bg-linear-to-r from-green-700 via-emerald-600 to-green-700 bg-clip-text text-transparent mb-3">
-            Emergency Request Active
+            {t('emergencyActive')}
           </h1>
           <div className="flex items-center justify-center gap-2 mb-3">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             <p className="text-gray-700 font-semibold text-lg">
-              Please stay calm. Help is on the way.
+              {t('stayCalm')}
             </p>
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
           </div>
           <div className="inline-block bg-green-100/80 backdrop-blur-sm px-4 py-2 rounded-full border border-green-200">
             <p className="text-sm text-gray-700 font-semibold">
-              Emergency ID: <span className="font-mono text-green-700">{emergencyData.id.slice(0, 8)}...</span>
+              {t('emergencyId')}: <span className="font-mono text-green-700">{emergencyData.id.slice(0, 8)}...</span>
             </p>
           </div>
         </div>
@@ -216,7 +218,7 @@ function EmergencyStatusContent() {
               {statusInfo.icon}
             </div>
             <div className="flex-1">
-              <p className="font-bold text-xl text-gray-900 mb-1">Current Status</p>
+              <p className="font-bold text-xl text-gray-900 mb-1">{t('currentStatus')}</p>
               <p className={`font-semibold text-lg ${statusInfo.textClass}`}>
                 {statusInfo.text}
               </p>
@@ -227,23 +229,22 @@ function EmergencyStatusContent() {
           <div className="space-y-4 relative">
             {/* Connecting line */}
             <div className="absolute left-4 top-6 bottom-6 w-0.5 bg-linear-to-b from-green-300 via-green-200 to-gray-200"></div>
-            
+
             <div className="flex items-center gap-4 relative">
               <div className="w-9 h-9 bg-linear-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 ring-4 ring-green-100 z-10">
                 <CheckCircle className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1 bg-white/60 backdrop-blur-sm rounded-xl p-3 shadow-sm">
-                <p className="font-bold text-gray-900">Emergency Request Sent</p>
-                <p className="text-xs text-gray-600 mt-0.5">Your emergency has been registered</p>
+                <p className="font-bold text-gray-900">{t('requestSent')}</p>
+                <p className="text-xs text-gray-600 mt-0.5">{t('requestRegistered')}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-4 relative">
-              <div className={`w-9 h-9 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 z-10 ${
-                emergencyData.status !== "pending"
-                  ? "bg-linear-to-br from-green-500 to-green-600 ring-4 ring-green-100"
-                  : "bg-linear-to-br from-yellow-400 to-yellow-500 animate-pulse ring-4 ring-yellow-100"
-              }`}>
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 z-10 ${emergencyData.status !== "pending"
+                ? "bg-linear-to-br from-green-500 to-green-600 ring-4 ring-green-100"
+                : "bg-linear-to-br from-yellow-400 to-yellow-500 animate-pulse ring-4 ring-yellow-100"
+                }`}>
                 {emergencyData.status !== "pending" ? (
                   <CheckCircle className="w-5 h-5 text-white" />
                 ) : (
@@ -251,29 +252,28 @@ function EmergencyStatusContent() {
                 )}
               </div>
               <div className="flex-1 bg-white/60 backdrop-blur-sm rounded-xl p-3 shadow-sm">
-                <p className="font-bold text-gray-900">Hospital Review</p>
+                <p className="font-bold text-gray-900">{t('hospitalReview')}</p>
                 <p className="text-xs text-gray-600 mt-0.5">
                   {emergencyData.status === "pending"
-                    ? "Waiting for hospital approval..."
-                    : "Approved by hospital"}
+                    ? t('waitingApproval')
+                    : t('approvedByHospital')}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-4 relative">
-              <div className={`w-9 h-9 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 z-10 ${
-                emergencyData.status === "dispatched" || emergencyData.status === "in_progress" || emergencyData.status === "resolved"
-                  ? "bg-linear-to-br from-green-500 to-green-600 ring-4 ring-green-100"
-                  : "bg-gray-300 ring-4 ring-gray-100"
-              }`}>
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 z-10 ${emergencyData.status === "dispatched" || emergencyData.status === "in_progress" || emergencyData.status === "resolved"
+                ? "bg-linear-to-br from-green-500 to-green-600 ring-4 ring-green-100"
+                : "bg-gray-300 ring-4 ring-gray-100"
+                }`}>
                 <Ambulance className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1 bg-white/60 backdrop-blur-sm rounded-xl p-3 shadow-sm">
-                <p className="font-bold text-gray-900">Ambulance Dispatched</p>
+                <p className="font-bold text-gray-900">{t('ambulanceDispatched')}</p>
                 <p className="text-xs text-gray-600 mt-0.5">
                   {emergencyData.status === "dispatched" || emergencyData.status === "in_progress" || emergencyData.status === "resolved"
-                    ? "Ambulance is on the way"
-                    : "Waiting for dispatch"}
+                    ? t('ambulanceWay')
+                    : t('waitingDispatch')}
                 </p>
               </div>
             </div>
@@ -288,26 +288,25 @@ function EmergencyStatusContent() {
                 <span className="text-3xl">🏥</span>
               </div>
               <div className="flex-1">
-                <p className="font-bold text-xl text-gray-900 mb-1">Assigned Hospital</p>
+                <p className="font-bold text-xl text-gray-900 mb-1">{t('assignedHospital')}</p>
                 <p className="text-gray-700 font-semibold text-lg">{emergencyData.assigned_hospital_name}</p>
               </div>
             </div>
 
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4">
-              <span className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold shadow-sm ${
-                emergencyData.status === "pending"
-                  ? "bg-gradient-to-r from-yellow-100 to-yellow-50 text-yellow-800 border border-yellow-300"
-                  : "bg-gradient-to-r from-green-100 to-green-50 text-green-800 border border-green-300"
-              }`}>
+              <span className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold shadow-sm ${emergencyData.status === "pending"
+                ? "bg-gradient-to-r from-yellow-100 to-yellow-50 text-yellow-800 border border-yellow-300"
+                : "bg-gradient-to-r from-green-100 to-green-50 text-green-800 border border-green-300"
+                }`}>
                 {emergencyData.status === "pending" ? (
                   <>
                     <Clock className="w-4 h-4" />
-                    Reviewing Request
+                    {t('reviewingRequest')}
                   </>
                 ) : (
                   <>
                     <CheckCircle className="w-4 h-4" />
-                    Request Approved
+                    {t('requestApproved')}
                   </>
                 )}
               </span>
@@ -323,8 +322,8 @@ function EmergencyStatusContent() {
                 <Ambulance className="w-8 h-8 text-green-600" />
               </div>
               <div className="flex-1">
-                <p className="font-bold text-xl text-gray-900 mb-1">Ambulance Details</p>
-                <p className="text-gray-700 font-semibold text-lg">Vehicle: {emergencyData.assigned_ambulance_number}</p>
+                <p className="font-bold text-xl text-gray-900 mb-1">{t('ambulanceDetails')}</p>
+                <p className="text-gray-700 font-semibold text-lg">{t('vehicle')}: {emergencyData.assigned_ambulance_number}</p>
               </div>
             </div>
 
@@ -335,7 +334,7 @@ function EmergencyStatusContent() {
                     <span className="text-lg">👤</span>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 font-medium">Driver Name</p>
+                    <p className="text-xs text-gray-500 font-medium">{t('driverName')}</p>
                     <p className="text-sm text-gray-800 font-bold">{emergencyData.driver_name}</p>
                   </div>
                 </div>
@@ -345,7 +344,7 @@ function EmergencyStatusContent() {
                       <Phone className="w-5 h-5 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 font-medium">Contact Number</p>
+                      <p className="text-xs text-gray-500 font-medium">{t('contactNumber')}</p>
                       <p className="text-sm text-gray-800 font-bold">{emergencyData.driver_phone}</p>
                     </div>
                   </div>
@@ -363,7 +362,7 @@ function EmergencyStatusContent() {
                 <Ambulance className="w-8 h-8 text-white" />
               </div>
             </div>
-            <p className="font-bold text-gray-900 mb-3 text-xl">Estimated Arrival Time</p>
+            <p className="font-bold text-gray-900 mb-3 text-xl">{t('estimatedArrival')}</p>
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-5 mb-3">
               <p className="text-5xl font-bold bg-linear-to-r from-green-600 via-emerald-600 to-green-600 bg-clip-text text-transparent">
                 {eta} – {eta + 2} min
@@ -371,7 +370,7 @@ function EmergencyStatusContent() {
             </div>
             <p className="text-sm text-gray-700 font-semibold flex items-center justify-center gap-2">
               <MapPin className="w-4 h-4 text-green-600" />
-              Please stay at your location
+              {t('stayLocation')}
             </p>
           </div>
         )}
@@ -383,7 +382,7 @@ function EmergencyStatusContent() {
               <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-emerald-200 rounded-xl flex items-center justify-center">
                 <MapPin className="w-6 h-6 text-green-600" />
               </div>
-              <p className="font-bold text-gray-900 text-xl">Route to Hospital</p>
+              <p className="font-bold text-gray-900 text-xl">{t('routeToHospital')}</p>
             </div>
             <iframe
               className="w-full h-64 rounded-xl border"
@@ -399,10 +398,10 @@ function EmergencyStatusContent() {
             <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
               <span className="text-xl">🚓</span>
             </div>
-            <p className="font-bold text-blue-900 text-lg">Police Notified</p>
+            <p className="font-bold text-blue-900 text-lg">{t('policeNotified')}</p>
           </div>
           <p className="text-sm text-blue-800 font-medium">
-            Your location and emergency details have been shared with the nearest police control room for additional support.
+            {t('policeMessage')}
           </p>
         </div>
 
@@ -414,7 +413,7 @@ function EmergencyStatusContent() {
               className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-4 rounded-2xl font-bold text-center shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center justify-center gap-2"
             >
               <Phone className="w-5 h-5" />
-              Call Ambulance Driver
+              {t('callDriver')}
             </a>
 
             <a
@@ -422,7 +421,7 @@ function EmergencyStatusContent() {
               className="bg-gray-100 hover:bg-gray-200 text-gray-800 py-4 rounded-2xl font-bold shadow-md hover:shadow-lg transform hover:scale-105 transition-all flex items-center justify-center gap-2"
             >
               <Phone className="w-5 h-5" />
-              Call Emergency (108)
+              {t('callEmergency')}
             </a>
           </div>
         )}
@@ -430,13 +429,13 @@ function EmergencyStatusContent() {
         {/* HELP TEXT */}
         <div className="bg-red-50/90 backdrop-blur-xl border border-red-200 rounded-3xl p-4 text-center">
           <p className="text-sm text-red-800 font-semibold">
-            ⚠️ In case of life-threatening emergency, call <span className="font-bold">108</span> immediately
+            ⚠️ {t('emergencyWarning')} <span className="font-bold">108</span> {t('immediately')}
           </p>
         </div>
 
         {/* FOOTER */}
         <p className="text-center text-sm text-gray-600 mt-6 font-medium">
-          @2026 Kozhikode Emergency Network (KEN) · Every second saves a life
+          {t('footerCopyright')} · {t('footerQuote')}
         </p>
       </div>
     </div>
