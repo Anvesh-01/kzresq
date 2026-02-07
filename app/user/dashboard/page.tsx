@@ -1,524 +1,683 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
-import { User, Phone, Droplet, FileText, MapPin, Hospital, Clock, Navigation, AlertCircle, Activity, CheckCircle, Loader2, ArrowRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
+import {
+  User,
+  Phone,
+  Droplet,
+  FileText,
+  MapPin,
+  Hospital,
+  Clock,
+  Calendar,
+  AlertCircle,
+  Activity,
+  LogOut,
+  Zap,
+  CalendarPlus,
+  History as HistoryIcon,
+  Settings,
+  Mail,
+  X,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
+import { UserSession } from "@/lib/auth-client";
 
-type Hospital = {
-  name: string;
-  lat: number;
-  lng: number;
-  distance: number;
-  doctor: string;
-  ai_score?: number;
-  availability?: {
-    total: number;
-    occupied: number;
-    load_percentage: number;
-  };
+type Emergency = {
+  id: string;
+  date: string;
+  status: "pending" | "in-progress" | "completed" | "cancelled";
+  hospital: string;
+  type: "emergency" | "appointment";
+  time?: string;
 };
 
-export default function EmergencyDetailsPage() {
-  /* ---------------- MOCK USER ---------------- */
-  const user = {
-    name: "John Doe",
-    phone: "9845612206",
-    bloodGroup: "O+",
-    conditions: "Asthma",
-  };
+type Hospital = {
+  id: string;
+  name: string;
+  distance: string;
+  doctor: string;
+  lat: number;
+  lng: number;
+};
 
-  /* ---------------- STATE ---------------- */
-  const [issueType, setIssueType] = useState("");
-  const [description, setDescription] = useState("");
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(
-    null
-  );
+export default function UserDashboard() {
+  const router = useRouter();
+  const [userSession, setUserSession] = useState<UserSession | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [emergencies, setEmergencies] = useState<Emergency[]>([]);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
-  const [selectedHospital, setSelectedHospital] =
-    useState<Hospital | null>(null);
-  const [appointmentTime, setAppointmentTime] = useState<string | null>(null);
-  const [isSplash, setIsSplash] = useState(true);
+  const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
+  const [bookingLoading, setBookingLoading] = useState(false);
 
-  /* ---------------- SPLASH SCREEN TIMER ---------------- */
+  // Check authentication
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsSplash(false);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
+    const checkAuth = () => {
+      const sessionCookie = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("user_session="));
 
-  /* ---------------- DISTANCE ---------------- */
-  const calculateDistance = (
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ) => {
-    const R = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+      if (!sessionCookie) {
+        router.push("/user/sign-in");
+        return;
+      }
 
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
+      try {
+        const sessionData = JSON.parse(
+          decodeURIComponent(sessionCookie.split("=")[1])
+        );
+        setUserSession(sessionData);
+      } catch (error) {
+        console.error("Failed to parse session:", error);
+        router.push("/user/sign-in");
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    checkAuth();
+  }, [router]);
+
+  // Fetch user's emergency/appointment history from database
+  useEffect(() => {
+    if (userSession) {
+      // Fetch real appointments from database
+      const fetchAppointments = async () => {
+        try {
+          const response = await fetch(`/api/appointments?user_phone=${encodeURIComponent(userSession.phone_number)}`);
+          const data = await response.json();
+
+          if (data.success && data.appointments) {
+            // Convert database appointments to Emergency type
+            const dbAppointments: Emergency[] = data.appointments.map((apt: any) => ({
+              id: apt.id,
+              date: new Date(apt.created_at).toISOString().split('T')[0],
+              status: apt.status,
+              hospital: apt.hospital_name,
+              type: "appointment",
+              time: apt.appointment_time ? new Date(apt.appointment_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : undefined,
+            }));
+            setEmergencies(dbAppointments);
+          }
+        } catch (error) {
+          console.error("Failed to fetch appointments:", error);
+          // Keep mock data as fallback
+          setEmergencies([
+            {
+              id: "1",
+              date: "2026-02-05",
+              status: "completed",
+              hospital: "Medical Trust Hospital",
+              type: "emergency",
+            },
+            {
+              id: "2",
+              date: "2026-02-10",
+              status: "pending",
+              hospital: "Beach Hospital",
+              type: "appointment",
+              time: "10:30 AM",
+            },
+          ]);
+        }
+      };
+
+      fetchAppointments();
+    }
+  }, [userSession]);
+
+  // Fetch nearby hospitals when opening appointment modal
+  useEffect(() => {
+    if (showAppointmentModal && hospitals.length === 0) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const res = await fetch("/api/hospitals", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+              }),
+            });
+            const data = await res.json();
+            const nearby = data.slice(0, 10).map((h: any, idx: number) => ({
+              id: h.id || `hospital-${idx}`,
+              name: h.name,
+              distance: `${(Math.random() * 5 + 0.5).toFixed(1)} km`,
+              doctor: ["Cardiologist", "General Physician", "Orthopaedic"][
+                idx % 3
+              ],
+              lat: h.lat,
+              lng: h.lng,
+            }));
+            setHospitals(nearby);
+          } catch (error) {
+            console.error("Failed to fetch hospitals:", error);
+          }
+        },
+        (error) => {
+          console.error("Location error:", error);
+        }
+      );
+    }
+  }, [showAppointmentModal, hospitals.length]);
+
+  const handleLogout = () => {
+    document.cookie =
+      "user_session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    router.push("/user");
   };
 
-  /* ---------------- FETCH HOSPITALS ---------------- */
-  const fetchHospitals = useCallback(async (lat: number, lng: number) => {
+  const handleSOSClick = () => {
+    router.push("/user/sos");
+  };
+
+  const handleBookAppointment = async () => {
+    if (!selectedHospital || !selectedDate || !selectedTime) {
+      alert("Please select hospital, date, and time");
+      return;
+    }
+
+    if (!userSession) {
+      alert("Please log in to book an appointment");
+      return;
+    }
+
+    setBookingLoading(true);
+
     try {
-      const res = await fetch("/api/hospitals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude: lat, longitude: lng }),
+      // Get user's current location for the appointment
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject);
       });
 
-      const data = await res.json();
+      // Combine date and time into a timestamp
+      const appointmentDateTime = `${selectedDate}T${selectedTime}:00`;
 
-      if (!Array.isArray(data)) return;
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const enriched: Hospital[] = data.map((h: any) => ({
-        name: h.name,
-        lat: h.latitude,
-        lng: h.longitude,
-        distance: h.distance || calculateDistance(lat, lng, h.latitude, h.longitude),
-        doctor: ["General Physician", "Cardiologist", "Orthopaedic"][
-          Math.floor(Math.random() * 3)
-        ],
-        ai_score: h.ai_score,
-        availability: h.availability
-      }));
-
-      // Sort by AI score if available, otherwise by distance
-      enriched.sort((a, b) => (b.ai_score || 0) - (a.ai_score || 0));
-
-      setHospitals(enriched);
-    } catch (error) {
-      console.error("Error fetching hospitals:", error);
-    }
-  }, []);
-
-  /* ---------------- LOCATION ---------------- */
-  useEffect(() => {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const loc = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        };
-        setLocation(loc);
-        fetchHospitals(loc.lat, loc.lng);
-      },
-      () => alert("Location permission required"),
-      { enableHighAccuracy: true }
-    );
-  }, [fetchHospitals]);
-
-  /* ---------------- SELECT HOSPITAL ---------------- */
-  const handleHospitalSelect = (hospital: Hospital) => {
-    setSelectedHospital(hospital);
-    setAppointmentTime("Within 30–45 minutes");
-
-    // Smooth scroll to scroll bottom
-    window.scrollTo({
-      top: document.body.scrollHeight,
-      behavior: 'smooth'
-    });
-  };
-
-  /* ---------------- SUBMIT ---------------- */
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-
-  const handleRequestAppointment = async () => {
-    if (!issueType) {
-      setSubmitError("Please select a medical issue");
-      return;
-    }
-    if (!selectedHospital) {
-      setSubmitError("Please select a hospital");
-      return;
-    }
-    if (!location) {
-      setSubmitError("Location not available");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setSubmitError("");
-
-    try {
+      // Call the API to create appointment
       const response = await fetch("/api/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user_phone: user.phone,
-          user_name: user.name,
-          blood_group: user.bloodGroup,
-          medical_conditions: user.conditions,
-          issue_type: issueType,
-          description: description,
+          user_phone: userSession.phone_number,
+          user_name: userSession.name,
+          blood_group: userSession.blood_group,
+          medical_conditions: null, // You can add this to user profile later
+          issue_type: "General Consultation",
+          description: "User booked appointment from dashboard",
           hospital_name: selectedHospital.name,
           hospital_lat: selectedHospital.lat,
           hospital_lng: selectedHospital.lng,
-          user_lat: location.lat,
-          user_lng: location.lng,
+          user_lat: position.coords.latitude,
+          user_lng: position.coords.longitude,
         }),
       });
 
       const data = await response.json();
 
       if (data.success) {
-        setSubmitSuccess(true);
-        // Reset form after 3 seconds
-        setTimeout(() => {
-          setIssueType("");
-          setDescription("");
-          setSelectedHospital(null);
-          setAppointmentTime(null);
-          setSubmitSuccess(false);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 3000);
+        // Add new appointment to the local list
+        const newAppointment: Emergency = {
+          id: data.data.id,
+          date: selectedDate,
+          status: "pending",
+          hospital: selectedHospital.name,
+          type: "appointment",
+          time: selectedTime,
+        };
+        setEmergencies([newAppointment, ...emergencies]);
+
+        alert(`✅ Appointment booked successfully at ${selectedHospital.name}!`);
       } else {
-        setSubmitError(data.error || "Failed to submit appointment request");
+        alert(`❌ Failed to book appointment: ${data.error}`);
       }
     } catch (error) {
-      console.error("Error submitting appointment:", error);
-      setSubmitError("Network error. Please try again.");
+      console.error("Error booking appointment:", error);
+      alert("❌ Failed to book appointment. Please try again.");
     } finally {
-      setIsSubmitting(false);
+      // Reset and close modal
+      setShowAppointmentModal(false);
+      setSelectedHospital(null);
+      setSelectedDate("");
+      setSelectedTime("");
+      setBookingLoading(false);
     }
   };
 
-  return (
-    <>
-      {/* UBER-STYLE SPLASH SCREEN */}
-      {isSplash && (
-        <div className="fixed inset-0 z-[100] bg-white flex items-center justify-center overflow-hidden animate-[uber-exit_0.4s_ease-in-out_0.6s_forwards]">
-          <div className="relative w-28 h-28 md:w-36 md:h-36 animate-[uber-reveal_0.8s_cubic-bezier(0.16,1,0.3,1)_forwards]">
-            <Image
-              src="/KenLogo1.png"
-              alt="KEN Logo"
-              fill
-              className="object-contain"
-              priority
-            />
-          </div>
+  const handleEditProfile = () => {
+    // Navigate to a profile edit page or open a modal
+    // For now, we'll show an alert - you can implement a proper edit page later
+    alert("Profile editing feature coming soon! This will allow you to update your personal and medical information.");
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-100 flex items-center justify-center">
+        <div className="text-center">
+          <Activity className="w-12 h-12 text-emerald-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading dashboard...</p>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-green-50 relative overflow-hidden py-8 px-4 sm:px-6 lg:px-8">
-        {/* BACKGROUND DECORATIONS */}
-        <div className="blur-blob w-[600px] h-[600px] bg-gradient-to-br from-emerald-200 to-green-100 -top-32 -left-32 animate-pulse-slow z-0 opacity-30 fixed" />
-        <div className="blur-blob w-[700px] h-[700px] bg-gradient-to-tl from-teal-200 to-emerald-100 -bottom-40 -right-40 animate-pulse-slow [animation-delay:1s] z-0 opacity-20 fixed" />
+  if (!userSession) {
+    return null;
+  }
 
-        <div className={`relative z-10 max-w-5xl mx-auto transition-all duration-700 ease-in-out ${isSplash ? 'opacity-0 scale-95 blur-md' : 'opacity-100 scale-100 blur-0'}`}>
-          {/* HEADER */}
-          <div className="text-center mb-10 animate-fade-in">
-            <div className="relative inline-flex items-center justify-center w-20 h-20 mb-4">
-              <div className="relative w-20 h-20 drop-shadow-xl">
+  const getStatusColor = (status: Emergency["status"]) => {
+    switch (status) {
+      case "completed":
+        return "text-green-600 bg-green-50 border-green-200";
+      case "in-progress":
+        return "text-blue-600 bg-blue-50 border-blue-200";
+      case "pending":
+        return "text-yellow-600 bg-yellow-50 border-yellow-200";
+      case "cancelled":
+        return "text-red-600 bg-red-50 border-red-200";
+    }
+  };
+
+  const getStatusIcon = (status: Emergency["status"]) => {
+    switch (status) {
+      case "completed":
+        return <CheckCircle2 className="w-4 h-4" />;
+      case "in-progress":
+        return <Activity className="w-4 h-4 animate-pulse" />;
+      case "pending":
+        return <Clock className="w-4 h-4" />;
+      case "cancelled":
+        return <XCircle className="w-4 h-4" />;
+    }
+  };
+
+  const timeSlots = [
+    "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+    "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM", "04:00 PM", "04:30 PM",
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-100 relative overflow-hidden">
+      {/* Background Decorations */}
+      <div className="blur-blob w-96 h-96 bg-green-200 -top-24 -left-24 animate-pulse-slow z-0" />
+      <div className="blur-blob w-[500px] h-[500px] bg-emerald-200 -bottom-32 -right-32 animate-pulse-slow [animation-delay:1s] z-0" />
+
+      <div className="relative z-10">
+        {/* Header */}
+        <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="relative w-12 h-12 md:w-14 md:h-14">
                 <Image
                   src="/KenLogo1.png"
                   alt="KEN Logo"
                   fill
-                  className="object-contain"
+                  className="object-contain rounded-xl"
                   priority
                 />
+              </div>
+              <h1 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">
+                KEN Dashboard
+              </h1>
+            </div>
+
+            {/* User Profile & Logout */}
+            <div className="flex items-center gap-3">
+              <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-emerald-50 rounded-xl border border-emerald-200">
+                <User className="w-5 h-5 text-emerald-600" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{userSession.name}</p>
+                  <p className="text-xs text-gray-600">{userSession.phone_number}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-xl border border-red-200 transition-all duration-200"
+              >
+                <LogOut className="w-5 h-5" />
+                <span className="hidden md:inline">Logout</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-4 md:px-6 py-8">
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-200">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center">
+                  <Zap className="w-7 h-7 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {emergencies.filter(e => e.type === "emergency").length}
+                  </p>
+                  <p className="text-sm text-gray-600">Total Emergencies</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-200">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center">
+                  <Calendar className="w-7 h-7 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {emergencies.filter(e => e.type === "appointment").length}
+                  </p>
+                  <p className="text-sm text-gray-600">Appointments</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-200">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Activity className="w-7 h-7 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {emergencies.filter(e => e.status === "pending").length}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Pending Actions</p>
+                </div>
               </div>
             </div>
             <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-2 tracking-tight">Medical Assistance</h1>
             <p className="text-gray-600 font-medium">Request appointments with nearby AI-recommended hospitals</p>
           </div>
 
+          {/* Quick Actions Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {/* SOS Emergency */}
+            <button
+              onClick={handleSOSClick}
+              className="bg-gradient-to-br from-red-600 to-red-700 text-white p-6 rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 flex flex-col items-center gap-3 border-4 border-white ring-4 ring-red-50"
+            >
+              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                <Zap className="w-8 h-8" />
+              </div>
+              <div className="text-center">
+                <h3 className="font-bold text-lg">Emergency SOS</h3>
+                <p className="text-xs text-red-100 mt-1">Instant help</p>
+              </div>
+            </button>
+
+            {/* Book Appointment */}
+            <button
+              onClick={() => setShowAppointmentModal(true)}
+              className="bg-white/80 backdrop-blur-xl p-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex flex-col items-center gap-3 border border-gray-200"
+            >
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
+                <CalendarPlus className="w-8 h-8 text-emerald-600" />
+              </div>
+              <div className="text-center">
+                <h3 className="font-bold text-lg text-gray-900">Book Appointment</h3>
+                <p className="text-xs text-gray-600 mt-1">Schedule visit</p>
+              </div>
+            </button>
+
+            {/* View History */}
+            <button
+              className="bg-white/80 backdrop-blur-xl p-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex flex-col items-center gap-3 border border-gray-200"
+            >
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                <HistoryIcon className="w-8 h-8 text-blue-600" />
+              </div>
+              <div className="text-center">
+                <h3 className="font-bold text-lg text-gray-900">History</h3>
+                <p className="text-xs text-gray-600 mt-1">{emergencies.length} records</p>
+              </div>
+            </button>
+
+            {/* Edit Profile */}
+            <button
+              onClick={handleEditProfile}
+              className="bg-white/80 backdrop-blur-xl p-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex flex-col items-center gap-3 border border-gray-200"
+            >
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
+                <Settings className="w-8 h-8 text-purple-600" />
+              </div>
+              <div className="text-center">
+                <h3 className="font-bold text-lg text-gray-900">Settings</h3>
+                <p className="text-xs text-gray-600 mt-1">Edit profile</p>
+              </div>
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-            {/* LEFT COLUMN - USER INFO & FORM */}
-            <div className="lg:col-span-1 space-y-6">
-              {/* PATIENT DETAILS CARD */}
-              <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/60 p-6 animate-slide-up">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-emerald-100 rounded-2xl flex items-center justify-center">
-                    <User className="w-5 h-5 text-emerald-600" />
-                  </div>
-                  <h2 className="text-lg font-bold text-gray-900">Patient Details</h2>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 p-3 bg-gray-50/80 rounded-2xl border border-gray-100">
-                    <User className="w-4 h-4 text-gray-500" />
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Name</p>
-                      <p className="text-gray-900 font-bold text-sm">{user.name}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-gray-50/80 rounded-2xl border border-gray-100">
-                    <Phone className="w-4 h-4 text-gray-500" />
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Phone</p>
-                      <p className="text-gray-900 font-bold text-sm">{user.phone}</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex items-center gap-3 p-3 bg-gray-50/80 rounded-2xl border border-gray-100">
-                      <Droplet className="w-4 h-4 text-red-500" />
-                      <div>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Blood</p>
-                        <p className="text-gray-900 font-bold text-sm">{user.bloodGroup}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-gray-50/80 rounded-2xl border border-gray-100">
-                      <FileText className="w-4 h-4 text-gray-500" />
-                      <div>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Conditions</p>
-                        <p className="text-gray-900 font-bold text-sm truncate max-w-[80px]">{user.conditions}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            {/* Emergency & Appointment History */}
+            <div className="lg:col-span-2 bg-white/80 backdrop-blur-xl rounded-3xl p-6 shadow-lg border border-gray-200">
+              <div className="flex items-center gap-3 mb-6">
+                <HistoryIcon className="w-6 h-6 text-emerald-600" />
+                <h3 className="text-xl font-bold text-gray-900">Recent Activity</h3>
               </div>
 
-              {/* MEDICAL ISSUE CARD */}
-              <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/60 p-6 animate-slide-up [animation-delay:0.1s]">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-orange-100 rounded-2xl flex items-center justify-center">
-                    <AlertCircle className="w-5 h-5 text-orange-600" />
-                  </div>
-                  <h2 className="text-lg font-bold text-gray-900">Medical Issue</h2>
+              {emergencies.length === 0 ? (
+                <div className="text-center py-12">
+                  <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No emergency or appointment history</p>
                 </div>
-
+              ) : (
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2 pl-1">
-                      Type of Issue <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      className="w-full p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl text-gray-900 font-medium focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 focus:bg-white transition-all appearance-none"
-                      value={issueType}
-                      onChange={(e) => setIssueType(e.target.value)}
+                  {emergencies.map((emergency) => (
+                    <div
+                      key={emergency.id}
+                      className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors"
                     >
-                      <option value="">Select medical issue</option>
-                      <option>General Consultation</option>
-                      <option>Accident / Injury</option>
-                      <option>Cardiac</option>
-                      <option>Orthopaedic</option>
-                      <option>Emergency</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2 pl-1">
-                      Description <span className="text-gray-400 font-medium normal-case">(Optional)</span>
-                    </label>
-                    <textarea
-                      placeholder="Brief description of your condition..."
-                      className="w-full p-4 bg-gray-50 border-2 border-gray-200 rounded-2xl text-gray-900 font-medium h-32 resize-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 focus:bg-white transition-all"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* RIGHT COLUMN - MAP & HOSPITALS */}
-            <div className="lg:col-span-2 space-y-6">
-
-              {/* 1. MAP + CURRENT LOCATION */}
-              {location && (
-                <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/60 p-6 animate-slide-up [animation-delay:0.2s]">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-emerald-100 rounded-2xl flex items-center justify-center">
-                      <MapPin className="w-5 h-5 text-emerald-600" />
-                    </div>
-                    <h2 className="text-lg font-bold text-gray-900">Your Location</h2>
-                  </div>
-                  <div className="relative group rounded-2xl overflow-hidden border-4 border-white shadow-lg">
-                    <iframe
-                      className="w-full h-48 md:h-64 group-hover:scale-105 transition-transform duration-700"
-                      src={`https://www.google.com/maps?q=${location.lat},${location.lng}&z=15&output=embed`}
-                    />
-                    <div className="absolute inset-0 ring-2 ring-emerald-100 pointer-events-none rounded-2xl"></div>
-                  </div>
-                </div>
-              )}
-
-              {/* 2. HOSPITAL SELECTION */}
-              <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/60 p-6 animate-slide-up [animation-delay:0.3s]">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-emerald-100 rounded-2xl flex items-center justify-center">
-                      <Hospital className="w-5 h-5 text-emerald-600" />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-bold text-gray-900">Nearby Hospitals</h2>
-                      <p className="text-xs text-gray-500 font-medium">Select a hospital to proceed</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                    {hospitals.length} found
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                  {hospitals.map((h, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleHospitalSelect(h)}
-                      className={`relative w-full text-left p-4 rounded-3xl border-2 transition-all duration-300 group overflow-hidden ${selectedHospital?.name === h.name
-                        ? "border-emerald-500 bg-gradient-to-br from-emerald-50 to-green-50 shadow-lg transform scale-[1.02] ring-2 ring-emerald-200 ring-offset-2"
-                        : "border-gray-100 bg-white hover:border-emerald-200 hover:bg-emerald-50/30 hover:shadow-md"
-                        }`}
-                    >
-                      <div className="flex justify-between items-start mb-3 relative z-10">
-                        <div className="flex-1 pr-2">
-                          <h3 className="font-bold text-gray-900 text-base leading-tight mb-1">{h.name}</h3>
-                          {/* AI SCORE BADGE */}
-                          {h.ai_score && (
-                            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${h.ai_score > 80 ? 'bg-green-100 text-green-700 border-green-200' :
-                              h.ai_score > 60 ? 'bg-yellow-100 text-yellow-700 border-yellow-200' : 'bg-gray-100 text-gray-700 border-gray-200'
-                              }`}>
-                              <Activity className="w-3 h-3" />
-                              Match: {h.ai_score}%
-                            </div>
+                      <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        {emergency.type === "emergency" ? (
+                          <Zap className="w-6 h-6 text-red-600" />
+                        ) : (
+                          <Calendar className="w-6 h-6 text-emerald-600" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h4 className="font-semibold text-gray-900">
+                            {emergency.type === "emergency" ? "Emergency SOS" : "Appointment"}
+                          </h4>
+                          <span
+                            className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+                              emergency.status
+                            )}`}
+                          >
+                            {getStatusIcon(emergency.status)}
+                            {emergency.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                          <span className="flex items-center gap-1">
+                            <Hospital className="w-4 h-4" />
+                            {emergency.hospital}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            {emergency.date}
+                          </span>
+                          {emergency.time && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              {emergency.time}
+                            </span>
                           )}
                         </div>
-                        {selectedHospital?.name === h.name ? (
-                          <div className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center shadow-md">
-                            <CheckCircle className="w-4 h-4 text-white" />
-                          </div>
-                        ) : (
-                          <div className="w-6 h-6 border-2 border-gray-200 rounded-full group-hover:border-emerald-300 transition-colors"></div>
-                        )}
                       </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-                      <div className="flex items-center gap-3 text-xs text-gray-500 font-medium relative z-10">
-                        <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg">
-                          <MapPin className="w-3 h-3 text-emerald-500" />
-                          {h.distance.toFixed(1)} km
+            {/* Profile Information */}
+            <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 shadow-lg border border-gray-200">
+              <div className="flex items-center gap-3 mb-6">
+                <User className="w-6 h-6 text-emerald-600" />
+                <h3 className="text-xl font-bold text-gray-900">Profile</h3>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <User className="w-5 h-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-gray-500">Name</p>
+                    <p className="font-medium text-gray-900">{userSession.name}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Phone className="w-5 h-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-gray-500">Phone</p>
+                    <p className="font-medium text-gray-900">{userSession.phone_number}</p>
+                  </div>
+                </div>
+
+                {userSession.blood_group && (
+                  <div className="flex items-start gap-3">
+                    <Droplet className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-xs text-gray-500">Blood Group</p>
+                      <p className="font-medium text-gray-900">{userSession.blood_group}</p>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleEditProfile}
+                  className="w-full mt-4 px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors"
+                >
+                  Edit Profile
+                </button>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* Appointment Booking Modal */}
+      {showAppointmentModal && (
+        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between rounded-t-3xl">
+              <h2 className="text-2xl font-bold text-gray-900">Book Appointment</h2>
+              <button
+                onClick={() => setShowAppointmentModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Hospital Selection */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Hospital className="w-5 h-5 text-emerald-600" />
+                  Select Hospital
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {hospitals.map((hospital) => (
+                    <button
+                      key={hospital.id}
+                      onClick={() => setSelectedHospital(hospital)}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${selectedHospital?.id === hospital.id
+                        ? "border-emerald-600 bg-emerald-50"
+                        : "border-gray-200 hover:border-emerald-300 bg-white"
+                        }`}
+                    >
+                      <h4 className="font-semibold text-gray-900 mb-1">{hospital.name}</h4>
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-4 h-4" />
+                          {hospital.distance}
                         </span>
-                        {/* AVAILABILITY BADGE */}
-                        {h.availability && (
-                          <span className={`flex items-center gap-1 px-2 py-1 rounded-lg ${h.availability.load_percentage < 50 ? 'bg-blue-50 text-blue-700' :
-                            h.availability.load_percentage < 80 ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-700'
-                            }`}>
-                            <Activity className="w-3 h-3" />
-                            {h.availability.load_percentage < 50 ? 'Available' : h.availability.load_percentage < 80 ? 'Busy' : 'Full'}
-                          </span>
-                        )}
+                        <span className="flex items-center gap-1">
+                          <User className="w-4 h-4" />
+                          {hospital.doctor}
+                        </span>
                       </div>
-
-                      {/* DECORATIVE BLUR */}
-                      <div className="absolute -bottom-10 -right-10 w-24 h-24 bg-emerald-100 rounded-full blur-2xl opacity-0 group-hover:opacity-50 transition-opacity duration-500"></div>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* 3. CONFIRMATION / SUBMIT AREA */}
-              {selectedHospital && location && (
-                <div className="bg-gradient-to-br from-emerald-900 to-green-900 rounded-3xl shadow-2xl p-8 animate-slide-up text-white relative overflow-hidden">
-                  {/* Background Patterns */}
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-                  <div className="absolute bottom-0 left-0 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none"></div>
+              {/* Date Selection */}
+              {selectedHospital && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-emerald-600" />
+                    Select Date
+                  </h3>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                  />
+                </div>
+              )}
 
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10">
-                        <Navigation className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <h2 className="text-2xl font-bold text-white">Route to Hospital</h2>
-                        <p className="text-emerald-100/80 text-sm">Estimated arrival: {appointmentTime}</p>
-                      </div>
-                    </div>
-
-                    {/* MINI MAP or ROUTE INFO */}
-                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 mb-6 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-white/20 p-2 rounded-xl">
-                          <Hospital className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-emerald-200 uppercase tracking-widest font-bold">Destination</p>
-                          <p className="font-bold text-lg">{selectedHospital.name}</p>
-                        </div>
-                      </div>
-                      <ArrowRight className="w-6 h-6 text-emerald-200/50" />
-                    </div>
-
-                    <button
-                      onClick={handleRequestAppointment}
-                      disabled={isSubmitting || submitSuccess}
-                      className={`w-full py-5 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-3 ${submitSuccess
-                        ? "bg-white text-emerald-900"
-                        : isSubmitting
-                          ? "bg-gray-500/50 text-white/50 cursor-not-allowed"
-                          : "bg-gradient-to-r from-emerald-400 to-green-400 text-emerald-950"
-                        }`}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="w-6 h-6 animate-spin" />
-                          Submitting Request...
-                        </>
-                      ) : submitSuccess ? (
-                        <>
-                          <CheckCircle className="w-6 h-6 text-emerald-600" />
-                          Request Sent Successfully!
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="w-6 h-6" />
-                          Confirm Appointment
-                        </>
-                      )}
-                    </button>
-
-                    {submitError && (
-                      <div className="mt-4 p-4 bg-red-500/20 border border-red-500/30 rounded-2xl text-center backdrop-blur-md">
-                        <p className="text-red-100 text-sm font-bold flex items-center justify-center gap-2">
-                          <AlertCircle className="w-4 h-4" />
-                          {submitError}
-                        </p>
-                      </div>
-                    )}
-
-                    {submitSuccess && (
-                      <div className="mt-4 p-4 bg-emerald-500/20 border border-emerald-500/30 rounded-2xl text-center backdrop-blur-md">
-                        <p className="text-emerald-100 text-sm font-bold">
-                          Redirecting to emergency status...
-                        </p>
-                      </div>
-                    )}
+              {/* Time Selection */}
+              {selectedHospital && selectedDate && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-emerald-600" />
+                    Select Time
+                  </h3>
+                  <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                    {timeSlots.map((time) => (
+                      <button
+                        key={time}
+                        onClick={() => setSelectedTime(time)}
+                        className={`px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${selectedTime === time
+                          ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                          : "border-gray-200 hover:border-emerald-300 text-gray-700"
+                          }`}
+                      >
+                        {time}
+                      </button>
+                    ))}
                   </div>
                 </div>
+              )}
+
+              {/* Confirm Button */}
+              {selectedHospital && selectedDate && selectedTime && (
+                <button
+                  onClick={handleBookAppointment}
+                  disabled={bookingLoading}
+                  className="w-full py-4 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl font-bold text-lg hover:shadow-lg transform hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+                >
+                  {bookingLoading ? (
+                    <>
+                      <Activity className="w-5 h-5 animate-spin" />
+                      Booking...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-5 h-5" />
+                      Confirm Appointment
+                    </>
+                  )}
+                </button>
               )}
             </div>
           </div>
         </div>
-      </div>
-
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #f1f5f9;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: linear-gradient(to bottom, #10b981, #059669);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(to bottom, #059669, #047857);
-        }
-      `}</style>
-    </>
+      )}
+    </div>
   );
 }

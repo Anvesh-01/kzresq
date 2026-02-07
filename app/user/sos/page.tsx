@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Phone, Users, MapPin, Clock, AlertCircle, Loader2, CheckCircle, Zap, Shield, X } from "lucide-react";
+import { UserSession } from "@/lib/auth-client";
 
 type Hospital = {
   id: string;
@@ -23,6 +24,7 @@ type Hospital = {
 export default function SOSPage() {
   const router = useRouter();
 
+  const [userSession, setUserSession] = useState<UserSession | null>(null);
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(
@@ -188,6 +190,28 @@ export default function SOSPage() {
       setLocationError("Geolocation is not supported by your browser");
     }
   };
+
+  /* ---------------- CHECK SESSION ON MOUNT ---------------- */
+  useEffect(() => {
+    // Check if user is logged in
+    const sessionCookie = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("user_session="));
+
+    if (sessionCookie) {
+      try {
+        const sessionData = JSON.parse(
+          decodeURIComponent(sessionCookie.split("=")[1])
+        );
+        setUserSession(sessionData);
+        // Auto-populate name and phone for logged-in users
+        setName(sessionData.name || "");
+        setPhone(sessionData.phone_number || "");
+      } catch (error) {
+        console.error("Failed to parse session:", error);
+      }
+    }
+  }, []);
 
   /* ---------------- AUTO GET LOCATION ON MOUNT ---------------- */
   useEffect(() => {
@@ -431,7 +455,7 @@ export default function SOSPage() {
                       </p>
                       {selectedHospital.ai_score && (
                         <p className={`text-xs px-2 py-0.5 rounded-full font-bold flex items-center ${selectedHospital.ai_score > 80 ? 'bg-green-200 text-green-800' :
-                            selectedHospital.ai_score > 60 ? 'bg-yellow-200 text-yellow-800' : 'bg-gray-200 text-gray-800'
+                          selectedHospital.ai_score > 60 ? 'bg-yellow-200 text-yellow-800' : 'bg-gray-200 text-gray-800'
                           }`}>
                           AI Score: {selectedHospital.ai_score}%
                         </p>
@@ -494,7 +518,7 @@ export default function SOSPage() {
                         </div>
                         {h.ai_score && (
                           <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${h.ai_score > 80 ? 'bg-green-100 text-green-700' :
-                              h.ai_score > 60 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'
+                            h.ai_score > 60 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'
                             }`}>
                             Match: {h.ai_score}%
                           </div>

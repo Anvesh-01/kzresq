@@ -68,7 +68,7 @@ export default function SignupPage() {
       }
 
       alert("✅ Account created successfully! Redirecting to login...");
-      router.push("/login");
+      router.push("/user/sign-in");
     } catch (error: unknown) {
       console.error("Signup error:", error);
       setError((error as Error).message || "Signup failed. Please try again.");
