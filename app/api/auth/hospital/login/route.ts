@@ -1,88 +1,106 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase'
-import { verifyPassword } from '@/lib/auth'
+import bcrypt from 'bcryptjs'
+import { cookies } from 'next/headers'
 
-export async function POST(request: NextRequest) {
+export interface HospitalSession {
+    id: string
+    email: string
+    name: string
+    address: string
+    phone: string
+    latitude: number
+    longitude: number
+}
+
+export interface PoliceSession {
+    id: string
+    username: string
+    name: string
+}
+
+// Hash password
+export async function hashPassword(password: string): Promise<string> {
+    const salt = await bcrypt.genSalt(10)
+    return bcrypt.hash(password, salt)
+}
+
+// Verify password
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
     try {
-        const body = await request.json()
-        const { username, password } = body
-
-        if (!username || !password) {
-            return NextResponse.json(
-                { success: false, error: 'Email and password are required' },
-                { status: 400 }
-            )
+        if (!password || !hash) {
+            console.error('verifyPassword: Missing password or hash')
+            return false
         }
-
-        const supabaseAdmin = getSupabaseAdmin()
-
-        console.log('🔐 Login attempt:', { username: username.toLowerCase().trim() })
-
-        // Find hospital by username
-        const { data: hospital, error } = await supabaseAdmin
-            .from('hospitals')
-            .select('*')
-            .eq('username', username.toLowerCase().trim())
-            .eq('is_active', true)
-            .single()
-
-        if (error || !hospital) {
-            console.error('❌ Hospital not found:', { username, error: error?.message })
-            return NextResponse.json(
-                { success: false, error: 'Invalid credentials' },
-                { status: 401 }
-            )
-        }
-
-        console.log('✅ Hospital found:', { id: hospital.id, name: hospital.name, hasPassword: !!hospital.password })
-
-        // Check if password exists
-        if (!hospital.password) {
-            console.error('❌ Hospital password is missing:', { username, hospitalId: hospital.id })
-            return NextResponse.json(
-                { success: false, error: 'Account setup incomplete. Please contact administrator.' },
-                { status: 500 }
-            )
-        }
-
-        // Verify password
-        console.log('🔍 Verifying password...')
-        const isValid = await verifyPassword(password, hospital.password)
-        console.log('🔍 Password verification result:', isValid)
-
-        if (!isValid) {
-            console.error('❌ Password verification failed')
-            return NextResponse.json(
-                { success: false, error: 'Invalid credentials' },
-                { status: 401 }
-            )
-        }
-
-        console.log('✅ Login successful for:', hospital.name)
-
-        // Update last login
-        await supabaseAdmin
-            .from('hospitals')
-            .update({ last_login: new Date().toISOString() })
-            .eq('id', hospital.id)
-
-        // Return hospital data (excluding password)
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { password: _password, ...hospitalData } = hospital
-
-        return NextResponse.json(
-            {
-                success: true,
-                hospital: hospitalData,
-                message: 'Login successful'
-            },
-            { status: 200 }
-        )
-    } catch (error: unknown) {
-        console.error('Login error:', error)
-        return NextResponse.json(
-            { success: false, error: 'Internal server error' },
-            { status: 500 }
-        )
+        return await bcrypt.compare(password, hash)
+    } catch (error) {
+        console.error('verifyPassword error:', error)
+        return false
     }
+}
+
+// --- Hospital Sessions (Server-side with cookies) ---
+
+export async function getHospitalSession(): Promise<HospitalSession | null> {
+    try {
+        const cookieStore = await cookies()
+        const sessionData = cookieStore.get('hospital_session')?.value
+        if (!sessionData) return null
+        return JSON.parse(sessionData)
+    } catch {
+        return null
+    }
+}
+
+export async function setHospitalSession(hospital: HospitalSession): Promise<void> {
+    const cookieStore = await cookies()
+    cookieStore.set('hospital_session', JSON.stringify(hospital), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        path: '/'
+    })
+}
+
+export async function clearHospitalSession(): Promise<void> {
+    const cookieStore = await cookies()
+    cookieStore.delete('hospital_session')
+}
+
+export async function isHospitalAuthenticated(): Promise<boolean> {
+    const session = await getHospitalSession()
+    return session !== null
+}
+
+// --- Police Sessions (Server-side with cookies) ---
+
+export async function getPoliceSession(): Promise<PoliceSession | null> {
+    try {
+        const cookieStore = await cookies()
+        const sessionData = cookieStore.get('police_session')?.value
+        if (!sessionData) return null
+        return JSON.parse(sessionData)
+    } catch {
+        return null
+    }
+}
+
+export async function setPoliceSession(police: PoliceSession): Promise<void> {
+    const cookieStore = await cookies()
+    cookieStore.set('police_session', JSON.stringify(police), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        path: '/'
+    })
+}
+
+export async function clearPoliceSession(): Promise<void> {
+    const cookieStore = await cookies()
+    cookieStore.delete('police_session')
+}
+
+export async function isPoliceAuthenticated(): Promise<boolean> {
+    const session = await getPoliceSession()
+    return session !== null
 }

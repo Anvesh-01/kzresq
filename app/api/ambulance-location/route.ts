@@ -35,7 +35,7 @@ export async function POST(req: Request) {
             .eq('id', ambulance_id);
 
         if (error) {
-            console.error("Supabase update error:", error);
+            console.error("Supabase update error:", JSON.stringify(error, null, 2));
             throw error;
         }
 
@@ -81,7 +81,7 @@ export async function GET(req: Request) {
         data: {
             latitude: data.latitude,
             longitude: data.longitude,
-            updatedAt: data.last_updated
+            updated_at: data.last_updated
         },
     });
 }

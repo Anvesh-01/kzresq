@@ -40,7 +40,7 @@ export default function LoginPage() {
       }
     } catch (err) {
       console.error("Login error:", err);
-      setError("Network error. Please try again.");
+      setError("Invalid credentials. Please try again.");
     } finally {
       setIsLoading(false);
     }

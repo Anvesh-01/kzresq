@@ -2,7 +2,13 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Ambulance, MapPin, Phone, Navigation, LogOut, CheckCircle } from 'lucide-react';
+import { Ambulance, MapPin, Phone, Navigation, LogOut, CheckCircle, ChevronRight, Map as MapIcon } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const LiveTrackingMap = dynamic(() => import('@/components/LiveTrackingMap'), {
+    ssr: false,
+    loading: () => <div className="w-full h-full bg-gray-100 flex items-center justify-center">Loading Navigation Map...</div>
+});
 
 type AssignedEmergency = {
     id: string;
@@ -18,7 +24,8 @@ type AssignedEmergency = {
 
 export default function AmbulanceDashboard() {
     const router = useRouter();
-    const [emergency, setEmergency] = useState<AssignedEmergency | null>(null);
+    const [emergencies, setEmergencies] = useState<AssignedEmergency[]>([]);
+    const [selectedEmergencyId, setSelectedEmergencyId] = useState<string | null>(null);
     const [ambulanceId, setAmbulanceId] = useState<string | null>(null);
     const [ambulanceInfo, setAmbulanceInfo] = useState<any>(null);
     const [isTracking, setIsTracking] = useState(false);
@@ -43,18 +50,60 @@ export default function AmbulanceDashboard() {
         if (!ambulanceId) return;
 
         try {
-            const res = await fetch(`/api/emergency?ambulance_id=${ambulanceId}&status=dispatched`);
+            // Check for both 'dispatched' and 'picked_up'
+            const vn = ambulanceInfo?.vehicle_number;
+            // Use only number if ID is problematic, but for now we try both as the API handles fallback
+            const res = await fetch(`/api/emergency?assigned_ambulance_number=${encodeURIComponent(vn || '')}`);
             const data = await res.json();
 
-            if (data.success && data.data.length > 0) {
-                setEmergency(data.data[0]);
-            } else {
-                // Also check for acknowledged but not yet completed? 
-                // For now, let's assume 'dispatched' is the active status for ambulance
-                setEmergency(null);
+            if (data.success) {
+                // Return all active emergencies (dispatched or in_progress)
+                const activeMissions = (data.data || []).filter((e: any) => e.status === 'dispatched' || e.status === 'in_progress');
+                setEmergencies(activeMissions);
+
+                // If no mission selected, pick the first one
+                if (!selectedEmergencyId && activeMissions.length > 0) {
+                    setSelectedEmergencyId(activeMissions[0].id);
+                }
             }
         } catch (e) {
             console.error("Error fetching emergency", e);
+        }
+    };
+
+    const emergency = emergencies.find(e => e.id === selectedEmergencyId) || (emergencies.length > 0 ? emergencies[0] : null);
+
+    const updateEmergencyStatus = async (id: string, status: string) => {
+        try {
+            const res = await fetch('/api/emergency', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: id,
+                    status: status
+                }),
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                if (status === 'resolved' && emergencies.length === 1) {
+                    // Mark ambulance available again ONLY if no other missions left
+                    await fetch('/api/ambulances', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: ambulanceId,
+                            is_available: true
+                        }),
+                    });
+                }
+                fetchEmergency();
+            } else {
+                alert("Failed to update status: " + (data.error || "Unknown error"));
+            }
+        } catch (e) {
+            console.error("Error updating status", e);
+            alert("Connection error");
         }
     };
 
@@ -140,13 +189,30 @@ export default function AmbulanceDashboard() {
             </div>
 
             <div className="p-4 space-y-4">
+                {emergencies.length > 1 && (
+                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                        {emergencies.map((e, idx) => (
+                            <button
+                                key={e.id}
+                                onClick={() => setSelectedEmergencyId(e.id)}
+                                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap border-2 transition-all ${selectedEmergencyId === e.id || (!selectedEmergencyId && idx === 0)
+                                    ? 'bg-blue-600 border-blue-600 text-white shadow-md scale-105'
+                                    : 'bg-white border-gray-200 text-gray-600'
+                                    }`}
+                            >
+                                Mission {idx + 1}: {e.name || 'Anonymous'}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 {emergency ? (
                     <div className="bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-red-500 animate-slide-up">
                         <div className="bg-red-600 p-4 text-white flex justify-between items-center">
                             <h2 className="font-bold text-lg flex items-center gap-2">
-                                <span className="animate-pulse">🚨</span> Emergency Assigned
+                                <span className="animate-pulse">🚨</span> {emergency.status === 'in_progress' ? 'Patient Picked Up' : 'Emergency Assigned'}
                             </h2>
-                            <span className="text-xs bg-red-800 px-2 py-1 rounded-full">CRITICAL</span>
+                            <span className="text-xs bg-red-800 px-2 py-1 rounded-full">{emergency.status === 'in_progress' ? 'IN TRANSIT' : 'CRITICAL'}</span>
                         </div>
 
                         <div className="p-5 space-y-4">
@@ -172,16 +238,52 @@ export default function AmbulanceDashboard() {
                                     <MapPin className="w-4 h-4" />
                                     Pickup Location
                                 </div>
-                                <p className="font-mono text-xs text-gray-600 mb-3 bg-white p-2 rounded border">
+                                <p className="font-mono text-xs text-gray-600 mb-4 bg-white p-2 rounded border">
                                     {emergency.latitude.toFixed(6)}, {emergency.longitude.toFixed(6)}
                                 </p>
+
+                                {/* Map Integration */}
+                                <div className="h-[450px] rounded-xl overflow-hidden mb-4 border-2 border-gray-100 shadow-inner">
+                                    {location ? (
+                                        <LiveTrackingMap
+                                            latitude={location.lat}
+                                            longitude={location.lng}
+                                            destLat={emergency.status === 'in_progress' ? emergency.assigned_hospital_lat : emergency.latitude}
+                                            destLng={emergency.status === 'in_progress' ? emergency.assigned_hospital_lng : emergency.longitude}
+                                            isHospital={emergency.status === 'in_progress'}
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full bg-gray-50 flex items-center justify-center text-gray-400 text-xs">
+                                            Waiting for GPS...
+                                        </div>
+                                    )}
+                                </div>
+
                                 <button
                                     onClick={openMap}
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
+                                    className="w-full bg-blue-50 text-blue-700 font-bold py-3 rounded-xl flex items-center justify-center gap-2 border border-blue-200 active:scale-95 transition-all mb-3 text-sm"
                                 >
                                     <Navigation className="w-5 h-5" />
-                                    Start Navigation
+                                    {emergency.status === 'in_progress' ? 'External Navigation to Hospital' : 'External Navigation to Patient'}
                                 </button>
+
+                                {emergency.status === 'dispatched' ? (
+                                    <button
+                                        onClick={() => updateEmergencyStatus(emergency.id, 'in_progress')}
+                                        className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
+                                    >
+                                        <CheckCircle className="w-5 h-5" />
+                                        Mark as Picked Up
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => updateEmergencyStatus(emergency.id, 'resolved')}
+                                        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
+                                    >
+                                        <CheckCircle className="w-5 h-5" />
+                                        Complete Mission
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

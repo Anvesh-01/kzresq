@@ -286,7 +286,9 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const phone = searchParams.get('phone');
     const id = searchParams.get('id');
-    const hospital_id = searchParams.get('hospital_id'); // NEW: Filter by hospital
+    const hospital_id = searchParams.get('hospital_id');
+    const assigned_ambulance_id = searchParams.get('assigned_ambulance_id');
+    const assigned_ambulance_number = searchParams.get('assigned_ambulance_number'); // NEW: Filter by vehicle number
 
     let query = supabaseAdmin
       .from('sos_emergencies')
@@ -306,6 +308,16 @@ export async function GET(request: NextRequest) {
     // Filter by ID if provided
     if (id) {
       query = query.eq('id', id);
+    }
+
+    // NEW: Filter by assigned_ambulance_id
+    if (assigned_ambulance_id) {
+      query = query.eq('assigned_ambulance_id', assigned_ambulance_id);
+    }
+
+    // NEW: Filter by assigned_ambulance_number
+    if (assigned_ambulance_number) {
+      query = query.eq('assigned_ambulance_number', assigned_ambulance_number);
     }
 
     // NEW: Filter by hospital_id - show only emergencies notified to this hospital
@@ -332,7 +344,25 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const { data, error } = await query;
+    let { data, error } = await query;
+
+    if (error && error.message.includes('assigned_ambulance_id')) {
+      console.warn("Retrying GET without assigned_ambulance_id filter");
+      // Build query again without assigned_ambulance_id
+      let fallbackQuery = supabaseAdmin
+        .from('sos_emergencies')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (phone) fallbackQuery = fallbackQuery.eq('phone_number', phone);
+      if (id) fallbackQuery = fallbackQuery.eq('id', id);
+      if (hospital_id) fallbackQuery = fallbackQuery.eq('hospital_id', hospital_id);
+      if (assigned_ambulance_number) fallbackQuery = fallbackQuery.eq('assigned_ambulance_number', assigned_ambulance_number);
+
+      const retry = await fallbackQuery;
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       console.error("Database error:", error);
@@ -384,6 +414,7 @@ export async function PATCH(request: NextRequest) {
       id,
       status,
       hospital_id, // Hospital that is approving
+      assigned_ambulance_id, // NEW: For dispatching
       assigned_ambulance_number,
       driver_name,
       driver_phone,
@@ -488,21 +519,39 @@ export async function PATCH(request: NextRequest) {
     };
 
     if (status) updateData.status = status;
+    // Safely update ambulance ID if column exists (we'll ignore error if it doesn't later)
+    if (assigned_ambulance_id) updateData.assigned_ambulance_id = assigned_ambulance_id;
     if (assigned_ambulance_number) updateData.assigned_ambulance_number = assigned_ambulance_number;
     if (driver_name) updateData.driver_name = driver_name;
     if (driver_phone) updateData.driver_phone = driver_phone;
     if (admin_notes) updateData.admin_notes = admin_notes;
 
-    if (status === 'resolved') {
+    if (status === 'resolved' || status === 'completed') {
       updateData.resolved_at = new Date().toISOString();
+      updateData.status = 'resolved'; // Normalize to resolved
     }
 
-    const { data, error } = await supabaseAdmin
+    // Perform update, but handle potential missing column 'assigned_ambulance_id'
+    let { data, error } = await supabaseAdmin
       .from('sos_emergencies')
       .update(updateData)
       .eq('id', id)
       .select()
       .single();
+
+    if (error && error.message.includes('assigned_ambulance_id')) {
+      // Retry without assigned_ambulance_id
+      console.warn("Retrying update without assigned_ambulance_id");
+      delete updateData.assigned_ambulance_id;
+      const retry = await supabaseAdmin
+        .from('sos_emergencies')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       console.error("Update error:", error);
