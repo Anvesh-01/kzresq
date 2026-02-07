@@ -3,19 +3,19 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
-import { Building2, Lock, User, AlertCircle, Loader2, Shield, Eye, EyeOff } from "lucide-react";
+import { Building2, Lock, User, AlertCircle, Loader2, Shield, Eye, EyeOff, Phone } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
 
-  const [username, setUsername] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   const handleHospitalLogin = async () => {
-    if (!username || !password) {
+    if (!phone || !password) {
       setError("Please fill in all fields");
       return;
     }
@@ -27,7 +27,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/user/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ phone: phone, password }),
       });
 
       const data = await res.json();
@@ -86,19 +86,20 @@ export default function LoginPage() {
 
           {/* LOGIN FORM */}
           <div className="space-y-5">
-            <div className="animate-slide-up delay-400">
+            {/* PHONE NUMBER */}
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Username
+                Phone Number
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
-                  type="text"
-                  placeholder="Enter Username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  type="tel"
+                  placeholder="Enter your phone number"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  className="w-full pl-11 pr-4 py-3.5 bg-white/50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 hover:border-green-300 hover:shadow-sm transition-all duration-200 outline-none"
+                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200"
                   disabled={isLoading}
                 />
               </div>

@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const hospitalName = searchParams.get('hospitalName');
+        const userPhone = searchParams.get('user_phone');
         const status = searchParams.get('status');
 
         let query = supabase
@@ -23,6 +24,11 @@ export async function GET(request: NextRequest) {
         if (hospitalName) {
             // Use case-insensitive partial match to handle slight name variations
             query = query.ilike('hospital_name', `%${hospitalName}%`);
+        }
+
+        // Filter by user phone if provided
+        if (userPhone) {
+            query = query.eq('user_phone', userPhone);
         }
 
         // Filter by status if provided
@@ -40,7 +46,7 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        return NextResponse.json({ success: true, data });
+        return NextResponse.json({ success: true, appointments: data });
     } catch (error) {
         console.error('Error in GET /api/appointments:', error);
         return NextResponse.json(

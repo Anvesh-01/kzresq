@@ -1,8 +1,7 @@
-// app/api/auth/signup/route.ts
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 
-// Check environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -97,71 +96,53 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user already exists
-    try {
-      const { data: existingUser } = await supabaseAdmin
-        .from("emergencies")
-        .select("email_id")
-        .eq("email_id", email_id.toLowerCase())
-        .single();
+    // Check if user already exists by email
+    const { data: existingUserByEmail } = await supabaseAdmin
+      .from("users")
+      .select("email_id")
+      .eq("email_id", email_id.toLowerCase())
+      .single();
 
-      if (existingUser) {
-        return NextResponse.json(
-          { error: "An account with this email already exists" },
-          { status: 409 }
-        );
-      }
-    } catch (e) {
-      // If error is "no rows returned", user doesn't exist - this is fine
-      // Any other error should be handled
-      console.log("Email check:", e);
-    }
-
-    console.log(`Creating auth user for email: ${email_id}`);
-
-    // Step 1: Create user in Supabase Auth
-    const { data: authData, error: authError } = await supabaseAdmin.auth.signUp({
-      email: email_id.trim().toLowerCase(),
-      password,
-      options: {
-        data: {
-          name: name.trim(),
-          phone: phone.trim(),
-        },
-        emailRedirectTo: `${request.nextUrl.origin}/auth/callback`,
-      },
-    });
-
-    if (authError) {
-      console.error("Auth error:", authError);
+    if (existingUserByEmail) {
       return NextResponse.json(
-        { error: authError.message || "Failed to create user account" },
-        { status: 400 }
+        { error: "An account with this email already exists" },
+        { status: 409 }
       );
     }
 
-    if (!authData.user) {
+    // Check if user already exists by phone
+    const { data: existingUserByPhone } = await supabaseAdmin
+      .from("users")
+      .select("phone_number")
+      .eq("phone_number", phone.trim())
+      .single();
+
+    if (existingUserByPhone) {
       return NextResponse.json(
-        { error: "User creation failed - no user returned" },
-        { status: 400 }
+        { error: "An account with this phone number already exists" },
+        { status: 409 }
       );
     }
 
-    console.log(`Auth user created with ID: ${authData.user.id}`);
+    console.log(`Creating user account for email: ${email_id}`);
 
-    // Step 2: Store user data in emergencies table
+    // Hash password with bcrypt
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insert user into users table
     const { data: userData, error: dbError } = await supabaseAdmin
-      .from("emergencies")
+      .from("users")
       .insert([
         {
-          user_id: authData.user.id,
           name: name.trim(),
           phone_number: phone.trim(),
-          password: phone.trim(),
-          email: email_id.trim().toLowerCase(),
+          email_id: email_id.trim().toLowerCase(),
+          password: hashedPassword,
           blood_group: bloodGroup || null,
           allergies: allergies?.trim() || null,
           medical_conditions: medicalConditions?.trim() || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         },
       ])
       .select()
@@ -169,32 +150,22 @@ export async function POST(request: NextRequest) {
 
     if (dbError) {
       console.error("Database error:", dbError);
-
-      // Rollback: Delete the auth user if database insert fails
-      console.log(`Rolling back - deleting auth user ${authData.user.id}`);
-      try {
-        await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-        console.log("Rollback successful");
-      } catch (deleteError) {
-        console.error("Rollback failed:", deleteError);
-      }
-
       return NextResponse.json(
-        { error: `Failed to save user data: ${dbError.message}` },
+        { error: `Failed to create user: ${dbError.message}` },
         { status: 500 }
       );
     }
 
-    console.log(`User data saved successfully for user ${authData.user.id}`);
+    console.log(`User created successfully with ID: ${userData.id}`);
 
-    // Return success response
+    // Return success response (excluding password)
     return NextResponse.json(
       {
         success: true,
-        message: "User created successfully. Please check your email to verify your account.",
+        message: "Account created successfully! You can now login.",
         user: {
-          id: authData.user.id,
-          email_id: authData.user.email,
+          id: userData.id,
+          email_id: userData.email_id,
           name: userData.name,
           phone_number: userData.phone_number,
         },
@@ -216,7 +187,6 @@ export async function POST(request: NextRequest) {
 // Health check endpoint
 export async function GET() {
   try {
-    // Check if environment variables are set
     if (!supabaseUrl || !supabaseServiceKey) {
       return NextResponse.json(
         {

@@ -98,220 +98,222 @@ export default function LandingPage() {
   };
 
   return (
-    <>
-      {/* UBER-STYLE SPLASH SCREEN */}
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-100 relative overflow-hidden">
+      {/* BACKGROUND DECORATIONS (BACKWARD) */}
+      <div className="blur-blob w-96 h-96 bg-green-200 -top-24 -left-24 animate-pulse-slow z-0" />
+      <div className="blur-blob w-[500px] h-[500px] bg-emerald-200 -bottom-32 -right-32 animate-pulse-slow [animation-delay:1s] z-0" />
+
+      {/* SPLASH SCREEN */}
       {isSplash && (
-        <div className="fixed inset-0 z-[100] bg-white flex items-center justify-center overflow-hidden animate-[uber-exit_0.8s_ease-in-out_2.2s_forwards]">
-          <div className="relative w-32 h-32 md:w-48 md:h-48 animate-[uber-reveal_1.2s_cubic-bezier(0.16,1,0.3,1)_forwards]">
-            <Image
-              src="/KenLogo1.png"
-              alt="KEN Logo"
-              fill
-              className="object-contain"
-              priority
-            />
+        <div className="fixed inset-0 z-[100] bg-gradient-to-br from-green-50 via-white to-emerald-100 flex items-center justify-center animate-fade-out">
+          <div className="flex flex-col items-center gap-6 animate-scale-up">
+            <div className="relative w-32 h-32 md:w-40 md:h-40">
+              <Image
+                src="/KenLogo1.png"
+                alt="KEN Logo"
+                fill
+                className="object-contain rounded-2xl"
+                priority
+              />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight">KEN</h1>
+            <p className="text-gray-600 font-medium text-lg">Kozhikode Emergency Network</p>
           </div>
         </div>
       )}
 
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-100 relative overflow-hidden">
-        {/* BACKGROUND DECORATIONS (BACKWARD) */}
-        <div className="blur-blob w-96 h-96 bg-green-200 -top-24 -left-24 animate-pulse-slow z-0" />
-        <div className="blur-blob w-[500px] h-[500px] bg-emerald-200 -bottom-32 -right-32 animate-pulse-slow [animation-delay:1s] z-0" />
+      {/* CONTENT (UPWARD) */}
+      <div className={`relative z-10 flex flex-col min-h-screen transition-all duration-1000 ${isSplash ? 'opacity-0 scale-95 blur-lg' : 'opacity-100 scale-100 blur-0'}`}>
+        {/* HEADER */}
+        <header className={`sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm ${!isSplash ? 'animate-[premium-blur-in_1s_ease-out_forwards]' : ''}`}>
+          <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="relative w-12 h-12 md:w-14 md:h-14">
+                <Image
+                  src="/KenLogo1.png"
+                  alt="Ken Logo"
+                  fill
+                  className="object-contain rounded-xl"
+                  priority
+                />
+              </div>
+              <h1 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">KEN</h1>
+            </div>
 
-        {/* CONTENT (UPWARD) */}
-        <div className={`relative z-10 flex flex-col min-h-screen transition-all duration-1000 ${isSplash ? 'opacity-0 scale-95 blur-lg' : 'opacity-100 scale-100 blur-0'}`}>
-          {/* HEADER */}
-          <header className={`sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm ${!isSplash ? 'animate-[premium-blur-in_1s_ease-out_forwards]' : ''}`}>
-            <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex justify-between items-center">
+            {/* Desktop Nav */}
+            <div className="hidden md:flex items-center gap-4">
+              <button
+                onClick={toggleLang}
+                className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-emerald-600 font-medium transition-colors"
+              >
+                <Languages className="w-5 h-5" />
+                {t.translateBtn}
+              </button>
+              <button
+                onClick={() => router.push("/user/sign-in")}
+                className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+              >
+                {t.login}
+              </button>
+              <button
+                onClick={() => router.push("/user/sign-up")}
+                className="px-5 py-2.5 gradient-bg-success text-white rounded-lg font-medium hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+              >
+                {t.signUp}
+              </button>
+            </div>
+
+            {/* Mobile Menu Toggle */}
+            <div className="flex md:hidden items-center gap-3">
+              <button
+                onClick={toggleLang}
+                className="p-2 text-gray-600 hover:text-emerald-600 transition-colors"
+                title={t.translateBtn}
+              >
+                <Languages className="w-6 h-6" />
+              </button>
+              <button
+                onClick={toggleMenu}
+                className="p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors z-[60]"
+              >
+                {isMenuOpen && !isClosing ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Professional Mobile Nav Overlay */}
+          {(isMenuOpen || isClosing) && (
+            <>
+              {/* Backdrop */}
+              <div
+                className={`fixed inset-0 bg-black/20 z-[55] ${isClosing ? 'animate-backdrop-exit' : 'animate-backdrop-fade'}`}
+                onClick={() => closeMenu()}
+              />
+
+              {/* Menu Content */}
+              <div className={`fixed top-[88px] left-4 right-4 bg-white border border-gray-100 rounded-[2.5rem] shadow-2xl z-[58] overflow-hidden ${isClosing ? 'animate-slideUpFadeExit' : 'animate-slideDownFade'}`}>
+                <div className="flex flex-col p-6 gap-6">
+                  {/* Logo Section in Menu */}
+                  <div className="flex items-center gap-3 pb-2">
+                    <div className="relative w-12 h-12">
+                      <Image
+                        src="/KenLogo1.png"
+                        alt="Ken Logo"
+                        fill
+                        className="object-contain rounded-xl"
+                      />
+                    </div>
+                    <span className="text-xl font-bold text-gray-900 tracking-tight">Kozikod emergency network (KEN)</span>
+                  </div>
+
+                  <div className="flex flex-col gap-4">
+                    <button
+                      onClick={() => { closeMenu(() => router.push("/user/sign-in")); }}
+                      className="w-full py-4 px-6 border border-gray-200 rounded-2xl text-gray-700 font-semibold text-center hover:bg-gray-50 active:bg-gray-100 transition-all animate-slideDownFade animate-stagger-2"
+                    >
+                      {t.login}
+                    </button>
+                    <button
+                      onClick={() => { closeMenu(() => router.push("/user/sign-up")); }}
+                      className="w-full py-4 px-6 gradient-bg-success text-white rounded-2xl font-bold text-center shadow-lg hover:shadow-xl active:scale-[0.98] transition-all animate-slideDownFade animate-stagger-3"
+                    >
+                      {t.signUp}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </header>
+
+        {/* HERO SECTION */}
+        <main className="relative max-w-7xl mx-auto px-6">
+          <div className="flex flex-col items-center justify-center text-center pt-12 md:pt-20 pb-12 md:pb-16 px-4">
+            <div className={`inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-full text-emerald-700 text-xs md:text-sm font-medium mb-6 shadow-sm ${!isSplash ? 'animate-[premium-blur-in_1s_ease-out_0.2s_both]' : 'opacity-0'}`}>
+              <div className="w-2 h-2 bg-emerald-600 rounded-full animate-pulse-slow"></div>
+              {t.emergencySystem}
+            </div>
+
+            <h2 className={`text-3xl md:text-6xl font-bold text-gray-900 mb-6 tracking-tight text-balance max-w-4xl leading-[1.1] ${!isSplash ? 'animate-[premium-blur-in_1s_ease-out_0.4s_both]' : 'opacity-0'}`}>
+              {t.heroTitle}{" "}
+              <span className="text-2xl md:text-5xl bg-gradient-to-r from-emerald-600 to-emerald-700 bg-clip-text text-transparent block md:inline mt-2 md:mt-0">
+                {t.heroSubtitle}
+              </span>
+            </h2>
+
+
+            {/* SOS SECTION */}
+            <div className={`bg-white/90 backdrop-blur-xl border-2 border-emerald-200 rounded-[2rem] p-6 md:p-10 w-full max-w-sm md:max-w-md mb-16 shadow-xl hover:shadow-2xl transition-shadow duration-300 flex flex-col items-center ${!isSplash ? 'animate-[premium-blur-in_1s_ease-out_0.6s_both]' : 'opacity-0'}`}>
+              <div className="flex items-center justify-center gap-2 mb-6">
+                <div className="w-2.5 h-2.5 bg-emerald-600 rounded-full animate-pulse-slow"></div>
+                <p className="text-emerald-700 font-bold text-base md:text-lg">
+                  {t.emergencyQuestion}
+                </p>
+              </div>
+
+              <button
+                onClick={() => router.push("/user/sos")}
+                className="w-40 h-40 md:w-56 md:h-56 gradient-bg-emergency text-white text-3xl md:text-4xl font-bold rounded-full shadow-lg hover:shadow-2xl active:scale-90 transition-all duration-300 animate-emergency-pulse mb-8 flex flex-col items-center justify-center gap-2 border-4 md:border-8 border-white ring-8 ring-red-50"
+              >
+                <Zap className="w-10 h-10 md:w-12 md:h-12" />
+                {t.sos}
+              </button>
+
+              <div className="space-y-3 text-center">
+                <p className="text-sm text-gray-700 flex items-center justify-center gap-2 font-medium">
+                  <Shield className="w-4 h-4 text-emerald-600" />
+                  {t.noLogin}
+                </p>
+                <p className="text-[11px] md:text-xs text-gray-500 max-w-[200px] md:max-w-none">
+                  {t.gpsCapture}
+                </p>
+              </div>
+            </div>
+
+            {/* FEATURES */}
+            <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 w-full max-w-5xl ${!isSplash ? 'animate-[premium-blur-in_1s_ease-out_0.8s_both]' : 'opacity-0'}`}>
+              <FeatureCard
+                icon={<Zap className="w-6 h-6 text-emerald-600" />}
+                title={t.feature1Title}
+                description={t.feature1Desc}
+              />
+              <FeatureCard
+                icon={<Activity className="w-6 h-6 text-green-600" />}
+                title={t.feature2Title}
+                description={t.feature2Desc}
+              />
+              <FeatureCard
+                icon={<MapPin className="w-6 h-6 text-teal-600" />}
+                title={t.feature3Title}
+                description={t.feature3Desc}
+              />
+            </div>
+          </div>
+        </main>
+
+        {/* FOOTER */}
+        <footer className="border-t border-gray-200 bg-white mt-12 md:mt-20">
+          <div className="max-w-7xl mx-auto px-6 py-10 md:py-8">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-6 md:gap-4">
               <div className="flex items-center gap-3">
-                <div className="relative w-12 h-12 md:w-14 md:h-14">
+                <div className="relative w-10 h-10 md:w-12 md:h-12">
                   <Image
                     src="/KenLogo1.png"
                     alt="Ken Logo"
                     fill
                     className="object-contain rounded-xl"
-                    priority
                   />
                 </div>
-                <h1 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">KEN</h1>
+                <span className="text-gray-900 font-bold text-lg">KEN</span>
               </div>
-
-              {/* Desktop Nav */}
-              <div className="hidden md:flex items-center gap-4">
-                <button
-                  onClick={toggleLang}
-                  className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-emerald-600 font-medium transition-colors"
-                >
-                  <Languages className="w-5 h-5" />
-                  {t.translateBtn}
-                </button>
-                <button
-                  onClick={() => router.push("/user/sign-in")}
-                  className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
-                >
-                  {t.login}
-                </button>
-                <button
-                  onClick={() => router.push("/user/sign-up")}
-                  className="px-5 py-2.5 gradient-bg-success text-white rounded-lg font-medium hover:shadow-lg transform hover:scale-105 transition-all duration-200"
-                >
-                  {t.signUp}
-                </button>
-              </div>
-
-              {/* Mobile Menu Toggle */}
-              <div className="flex md:hidden items-center gap-3">
-                <button
-                  onClick={toggleLang}
-                  className="p-2 text-gray-600 hover:text-emerald-600 transition-colors"
-                  title={t.translateBtn}
-                >
-                  <Languages className="w-6 h-6" />
-                </button>
-                <button
-                  onClick={toggleMenu}
-                  className="p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors z-[60]"
-                >
-                  {isMenuOpen && !isClosing ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-                </button>
-              </div>
+              <p className="text-sm text-gray-600 text-center md:text-left">
+                @2026 Kozikod emergency network (KEN) {t.footerQuote}
+              </p>
             </div>
-
-            {/* Professional Mobile Nav Overlay */}
-            {(isMenuOpen || isClosing) && (
-              <>
-                {/* Backdrop */}
-                <div
-                  className={`fixed inset-0 bg-black/20 z-[55] ${isClosing ? 'animate-backdrop-exit' : 'animate-backdrop-fade'}`}
-                  onClick={() => closeMenu()}
-                />
-
-                {/* Menu Content */}
-                <div className={`fixed top-[88px] left-4 right-4 bg-white border border-gray-100 rounded-[2.5rem] shadow-2xl z-[58] overflow-hidden ${isClosing ? 'animate-slideUpFadeExit' : 'animate-slideDownFade'}`}>
-                  <div className="flex flex-col p-6 gap-6">
-                    {/* Logo Section in Menu */}
-                    <div className="flex items-center gap-3 pb-2">
-                      <div className="relative w-12 h-12">
-                        <Image
-                          src="/KenLogo1.png"
-                          alt="Ken Logo"
-                          fill
-                          className="object-contain rounded-xl"
-                        />
-                      </div>
-                      <span className="text-xl font-bold text-gray-900 tracking-tight">Kozikod emergency network (KEN)</span>
-                    </div>
-
-                    <div className="flex flex-col gap-4">
-                      <button
-                        onClick={() => { closeMenu(() => router.push("/user/sign-in")); }}
-                        className="w-full py-4 px-6 border border-gray-200 rounded-2xl text-gray-700 font-semibold text-center hover:bg-gray-50 active:bg-gray-100 transition-all animate-slideDownFade animate-stagger-2"
-                      >
-                        {t.login}
-                      </button>
-                      <button
-                        onClick={() => { closeMenu(() => router.push("/user/sign-up")); }}
-                        className="w-full py-4 px-6 gradient-bg-success text-white rounded-2xl font-bold text-center shadow-lg hover:shadow-xl active:scale-[0.98] transition-all animate-slideDownFade animate-stagger-3"
-                      >
-                        {t.signUp}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-          </header>
-
-          {/* HERO SECTION */}
-          <main className="relative max-w-7xl mx-auto px-6">
-            <div className="flex flex-col items-center justify-center text-center pt-12 md:pt-20 pb-12 md:pb-16 px-4">
-              <div className={`inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-full text-emerald-700 text-xs md:text-sm font-medium mb-6 shadow-sm ${!isSplash ? 'animate-[premium-blur-in_1s_ease-out_0.2s_both]' : 'opacity-0'}`}>
-                <div className="w-2 h-2 bg-emerald-600 rounded-full animate-pulse-slow"></div>
-                {t.emergencySystem}
-              </div>
-
-              <h2 className={`text-3xl md:text-6xl font-bold text-gray-900 mb-6 tracking-tight text-balance max-w-4xl leading-[1.1] ${!isSplash ? 'animate-[premium-blur-in_1s_ease-out_0.4s_both]' : 'opacity-0'}`}>
-                {t.heroTitle}{" "}
-                <span className="text-2xl md:text-5xl bg-gradient-to-r from-emerald-600 to-emerald-700 bg-clip-text text-transparent block md:inline mt-2 md:mt-0">
-                  {t.heroSubtitle}
-                </span>
-              </h2>
-
-
-              {/* SOS SECTION */}
-              <div className={`bg-white/90 backdrop-blur-xl border-2 border-emerald-200 rounded-[2rem] p-6 md:p-10 w-full max-w-sm md:max-w-md mb-16 shadow-xl hover:shadow-2xl transition-shadow duration-300 flex flex-col items-center ${!isSplash ? 'animate-[premium-blur-in_1s_ease-out_0.6s_both]' : 'opacity-0'}`}>
-                <div className="flex items-center justify-center gap-2 mb-6">
-                  <div className="w-2.5 h-2.5 bg-emerald-600 rounded-full animate-pulse-slow"></div>
-                  <p className="text-emerald-700 font-bold text-base md:text-lg">
-                    {t.emergencyQuestion}
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => router.push("/user/sos")}
-                  className="w-40 h-40 md:w-56 md:h-56 gradient-bg-emergency text-white text-3xl md:text-4xl font-bold rounded-full shadow-lg hover:shadow-2xl active:scale-90 transition-all duration-300 animate-emergency-pulse mb-8 flex flex-col items-center justify-center gap-2 border-4 md:border-8 border-white ring-8 ring-red-50"
-                >
-                  <Zap className="w-10 h-10 md:w-12 md:h-12" />
-                  {t.sos}
-                </button>
-
-                <div className="space-y-3 text-center">
-                  <p className="text-sm text-gray-700 flex items-center justify-center gap-2 font-medium">
-                    <Shield className="w-4 h-4 text-emerald-600" />
-                    {t.noLogin}
-                  </p>
-                  <p className="text-[11px] md:text-xs text-gray-500 max-w-[200px] md:max-w-none">
-                    {t.gpsCapture}
-                  </p>
-                </div>
-              </div>
-
-              {/* FEATURES */}
-              <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 w-full max-w-5xl ${!isSplash ? 'animate-[premium-blur-in_1s_ease-out_0.8s_both]' : 'opacity-0'}`}>
-                <FeatureCard
-                  icon={<Zap className="w-6 h-6 text-emerald-600" />}
-                  title={t.feature1Title}
-                  description={t.feature1Desc}
-                />
-                <FeatureCard
-                  icon={<Activity className="w-6 h-6 text-green-600" />}
-                  title={t.feature2Title}
-                  description={t.feature2Desc}
-                />
-                <FeatureCard
-                  icon={<MapPin className="w-6 h-6 text-teal-600" />}
-                  title={t.feature3Title}
-                  description={t.feature3Desc}
-                />
-              </div>
-            </div>
-          </main>
-
-          {/* FOOTER */}
-          <footer className="border-t border-gray-200 bg-white mt-12 md:mt-20">
-            <div className="max-w-7xl mx-auto px-6 py-10 md:py-8">
-              <div className="flex flex-col md:flex-row justify-between items-center gap-6 md:gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="relative w-10 h-10 md:w-12 md:h-12">
-                    <Image
-                      src="/KenLogo1.png"
-                      alt="Ken Logo"
-                      fill
-                      className="object-contain rounded-xl"
-                    />
-                  </div>
-                  <span className="text-gray-900 font-bold text-lg">KEN</span>
-                </div>
-                <p className="text-sm text-gray-600 text-center md:text-left">
-                  @2026 Kozikod emergency network (KEN) {t.footerQuote}
-                </p>
-              </div>
-            </div>
-          </footer>
-        </div>
+          </div>
+        </footer>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -344,4 +346,5 @@ function StatCard({ value, label }: { value: string; label: string }) {
       <div className="text-sm text-gray-600">{label}</div>
     </div>
   );
+
 }

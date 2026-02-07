@@ -197,7 +197,7 @@ export default function PoliceDashboard() {
 
   // Change: Add state for ambulance tracking
   const [trackedAmbulanceId, setTrackedAmbulanceId] = useState<string | null>(null);
-  const [ambulanceLocation, setAmbulanceLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [ambulanceLocation, setAmbulanceLocation] = useState<{ latitude: number; longitude: number; updated_at?: string } | null>(null);
 
   /* ---------------- LIVE CLOCK ---------------- */
   useEffect(() => {
@@ -206,6 +206,57 @@ export default function PoliceDashboard() {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  /* ---------------- POLL LIVE AMBULANCE LOCATION ---------------- */
+  // Poll ambulance location every 3 seconds (matching hospital dashboard pattern)
+  const AMBULANCE_LOCATION_POLL_INTERVAL = 3000; // 3 seconds
+
+  useEffect(() => {
+    if (!trackedAmbulanceId) {
+      // Clear location if no ambulance is being tracked
+      setAmbulanceLocation(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchAmbulanceLocation = async () => {
+      try {
+        const res = await fetch(
+          `/api/ambulance-location?ambulance_id=${trackedAmbulanceId}`
+        );
+
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        if (isMounted && data.success) {
+          setAmbulanceLocation({
+            latitude: data.data.latitude,
+            longitude: data.data.longitude,
+            updated_at: data.data.updated_at,
+          });
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error('Error fetching ambulance location:', err);
+        }
+      }
+    };
+
+    // Fetch immediately
+    fetchAmbulanceLocation();
+
+    // Then poll every 3 seconds
+    const interval = setInterval(fetchAmbulanceLocation, AMBULANCE_LOCATION_POLL_INTERVAL);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [trackedAmbulanceId]);
 
   /* ---------------- FETCH POLICE REQUESTS ---------------- */
   const fetchPoliceRequests = async () => {
@@ -775,6 +826,19 @@ export default function PoliceDashboard() {
                 ambulanceLat={ambulanceLocation?.latitude}
                 ambulanceLng={ambulanceLocation?.longitude}
               />
+
+              {/* ✅ Added: Live update timestamp for police */}
+              {ambulanceLocation?.updated_at && (
+                <div className="mt-2 px-4 py-2 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-blue-700">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs font-bold uppercase tracking-wider">Live Tracking Active</span>
+                  </div>
+                  <span className="text-xs text-blue-600 font-medium italic">
+                    Last update: {new Date(ambulanceLocation.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                </div>
+              )}
             </div>
           </section>
         )}
