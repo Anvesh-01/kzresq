@@ -21,7 +21,8 @@ import {
 } from "lucide-react";
 import EmergencyMap from "@/components/EmergencyMap";
 import AmbulanceAssignmentMap from '@/components/AmbulanceAssignmentMap';
-import { getHospitalSession, clearHospitalSession, type HospitalSession } from '@/lib/auth';
+import { getHospitalSession, clearHospitalSession } from '@/lib/auth-client';
+import type { HospitalSession } from '@/lib/auth';
 import dynamic from 'next/dynamic';
 
 const LiveTrackingMap = dynamic(() => import('@/components/LiveTrackingMap'), {
