@@ -17,7 +17,8 @@ import {
   AlertCircle,
   X,
   Search,
-  Filter
+  Filter,
+  Shield
 } from "lucide-react";
 import AmbulanceAssignmentMap from '@/components/AmbulanceAssignmentMap';
 import { getHospitalSession, clearHospitalSession } from '@/lib/auth-client';
@@ -124,8 +125,11 @@ export default function HospitalDashboard() {
 
   // Loading states for async operations
   const [isApproving, setIsApproving] = useState(false);
-  const [isDispatching, setIsDispatching] = useState(false);
+  const [assigningAmbulanceId, setAssigningAmbulanceId] = useState<string | null>(null);
   const [isAddingAmbulance, setIsAddingAmbulance] = useState(false);
+  const [requestingPoliceFor, setRequestingPoliceFor] = useState<string | null>(null);
+  const [policeRequested, setPoliceRequested] = useState<Set<string>>(new Set());
+
 
   // Helper to find ambulance ID by number and track it
   const trackAmbulanceByNumber = (vehicleNumber: string) => {
@@ -500,7 +504,7 @@ export default function HospitalDashboard() {
 
   /* ---------------- DISPATCH AMBULANCE ---------------- */
   const dispatchAmbulance = async (emergencyId: string, ambulanceId: string) => {
-    setIsDispatching(true);
+    setAssigningAmbulanceId(ambulanceId);
 
     try {
       const selectedAmbulance = ambulances.find(a => a.id === ambulanceId);
@@ -556,7 +560,40 @@ export default function HospitalDashboard() {
       console.error("Error dispatching ambulance:", err);
       alert('Failed to dispatch ambulance. Please try again.');
     } finally {
-      setIsDispatching(false);
+      setAssigningAmbulanceId(null);
+    }
+  };
+
+  /* ---------------- REQUEST POLICE ASSISTANCE ---------------- */
+  const requestPoliceAssistance = async (emergencyId: string) => {
+    if (!hospitalInfo) return;
+
+    setRequestingPoliceFor(emergencyId);
+
+    try {
+      const res = await fetch('/api/police-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emergency_id: emergencyId,
+          hospital_id: hospitalInfo.id,
+          notes: 'Critical emergency - traffic clearance requested',
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      // Mark as requested
+      setPoliceRequested(prev => new Set(prev).add(emergencyId));
+      alert('Police assistance requested successfully!');
+
+    } catch (err) {
+      console.error('Error requesting police assistance:', err);
+      alert('Failed to request police assistance. Please try again.');
+    } finally {
+      setRequestingPoliceFor(null);
     }
   };
 
@@ -907,7 +944,7 @@ export default function HospitalDashboard() {
                     )}
 
                     {/* Actions */}
-                    <div className="flex gap-3">
+                    <div className="flex flex-wrap gap-3">
                       {emergency.status === 'pending' && !isAssignedToAnotherHospital && (
                         <button
                           onClick={() => approveEmergency(emergency.id)}
@@ -931,20 +968,42 @@ export default function HospitalDashboard() {
                         )}
 
                       {emergency.status === 'dispatched' && emergency.assigned_ambulance_number && (
-                        <button
-                          onClick={() => trackAmbulanceByNumber(emergency.assigned_ambulance_number!)}
-                          className={`flex items-center gap-3 px-5 py-3 rounded-xl border-2 transition-all shadow-md hover:scale-105 active:scale-95 ${trackedAmbulanceId && ambulances.find(a => a.id === trackedAmbulanceId)?.vehicle_number === emergency.assigned_ambulance_number
-                            ? "bg-green-600 border-green-700 text-white"
-                            : "bg-gradient-to-r from-green-50 to-emerald-50 border-green-300 text-green-800 hover:bg-green-100"
-                            }`}
-                        >
-                          <Activity className={`w-5 h-5 ${trackedAmbulanceId && ambulances.find(a => a.id === trackedAmbulanceId)?.vehicle_number === emergency.assigned_ambulance_number ? "animate-spin" : ""}`} />
-                          <p className="font-black text-sm">
-                            {trackedAmbulanceId && ambulances.find(a => a.id === trackedAmbulanceId)?.vehicle_number === emergency.assigned_ambulance_number
-                              ? "Tracking Live..."
-                              : `Track: ${emergency.assigned_ambulance_number}`}
-                          </p>
-                        </button>
+                        <>
+                          <button
+                            onClick={() => trackAmbulanceByNumber(emergency.assigned_ambulance_number!)}
+                            className={`flex items-center gap-3 px-5 py-3 rounded-xl border-2 transition-all shadow-md hover:scale-105 active:scale-95 ${trackedAmbulanceId && ambulances.find(a => a.id === trackedAmbulanceId)?.vehicle_number === emergency.assigned_ambulance_number
+                              ? "bg-green-600 border-green-700 text-white"
+                              : "bg-gradient-to-r from-green-50 to-emerald-50 border-green-300 text-green-800 hover:bg-green-100"
+                              }`}
+                          >
+                            <Activity className={`w-5 h-5 ${trackedAmbulanceId && ambulances.find(a => a.id === trackedAmbulanceId)?.vehicle_number === emergency.assigned_ambulance_number ? "animate-spin" : ""}`} />
+                            <p className="font-black text-sm">
+                              {trackedAmbulanceId && ambulances.find(a => a.id === trackedAmbulanceId)?.vehicle_number === emergency.assigned_ambulance_number
+                                ? "Tracking Live..."
+                                : `Track: ${emergency.assigned_ambulance_number}`}
+                            </p>
+                          </button>
+
+                          {/* 🚔 Police Assistance Button - Only for Critical/High Priority */}
+                          {(emergency.emergency_level === 'critical' || emergency.emergency_level === 'high') && (
+                            <button
+                              onClick={() => requestPoliceAssistance(emergency.id)}
+                              disabled={requestingPoliceFor === emergency.id || policeRequested.has(emergency.id)}
+                              className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold shadow-md transition-all ${policeRequested.has(emergency.id)
+                                  ? "bg-gradient-to-r from-indigo-100 to-indigo-200 border-2 border-indigo-400 text-indigo-800 cursor-not-allowed"
+                                  : "bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white hover:scale-105 active:scale-95"
+                                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                              aria-label="Request police assistance for traffic clearance"
+                            >
+                              <Shield className="w-4 h-4" />
+                              {requestingPoliceFor === emergency.id
+                                ? "Requesting..."
+                                : policeRequested.has(emergency.id)
+                                  ? "✓ Police Notified"
+                                  : "🚔 Request Police"}
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -1275,7 +1334,7 @@ export default function HospitalDashboard() {
           emergency={selectedEmergencyForAssignment}
           ambulances={ambulances}
           onAssign={(ambulanceId) => dispatchAmbulance(selectedEmergencyForAssignment.id, ambulanceId)}
-          isAssigning={isDispatching}
+          assigningAmbulanceId={assigningAmbulanceId}
         />
 
         {/* FOOTER */}

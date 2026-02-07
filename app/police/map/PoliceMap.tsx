@@ -18,8 +18,10 @@ if (typeof window !== 'undefined') {
 type PoliceMapProps = {
   userLat: number;
   userLng: number;
-  hospitalLat: number;
-  hospitalLng: number;
+  hospitalLat?: number;
+  hospitalLng?: number;
+  ambulanceLat?: number;
+  ambulanceLng?: number;
 };
 
 export default function PoliceMap({
@@ -27,6 +29,8 @@ export default function PoliceMap({
   userLng,
   hospitalLat,
   hospitalLng,
+  ambulanceLat,
+  ambulanceLng,
 }: PoliceMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -40,19 +44,26 @@ export default function PoliceMap({
       mapRef.current = null;
     }
 
-    // Validate coordinates
-    if (isNaN(userLat) || isNaN(userLng) || isNaN(hospitalLat) || isNaN(hospitalLng)) {
-      console.error("Invalid coordinates passed to PoliceMap", { userLat, userLng, hospitalLat, hospitalLng });
+    // Validate coordinates - ensure at least user (emergency) works
+    if (isNaN(userLat) || isNaN(userLng)) {
+      console.error("Invalid emergency coordinates passed to PoliceMap", { userLat, userLng });
       const map = L.map(containerRef.current).setView([userLat || 0, userLng || 0], 13);
       mapRef.current = map;
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
       return;
     }
 
-    // Initialize map
+    // Initialize map center - prefer midpoint of all available points or just user
+    const points = [[userLat, userLng]];
+    if (hospitalLat && hospitalLng) points.push([hospitalLat, hospitalLng]);
+    if (ambulanceLat && ambulanceLng) points.push([ambulanceLat, ambulanceLng]);
+
+    const centerLat = points.reduce((sum, p) => sum + p[0], 0) / points.length;
+    const centerLng = points.reduce((sum, p) => sum + p[1], 0) / points.length;
+
     const map = L.map(containerRef.current).setView(
-      [(userLat + hospitalLat) / 2, (userLng + hospitalLng) / 2],
-      14
+      [centerLat, centerLng],
+      13
     );
 
     mapRef.current = map;
@@ -116,6 +127,30 @@ export default function PoliceMap({
       popupAnchor: [0, -24],
     });
 
+    // Custom ambulance icon
+    const ambulanceIcon = L.divIcon({
+      className: "custom-ambulance-icon",
+      html: `
+        <div style="
+          width: 48px;
+          height: 48px;
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+          border-radius: 50%;
+          border: 4px solid white;
+          box-shadow: 0 6px 12px rgba(245, 158, 11, 0.4), 0 0 0 8px rgba(245, 158, 11, 0.1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        ">
+          <span style="font-size: 24px;">🚑</span>
+        </div>
+      `,
+      iconSize: [48, 48],
+      iconAnchor: [24, 24],
+      popupAnchor: [0, -24],
+    });
+
     // Add emergency marker with enhanced popup
     const emergencyMarker = L.marker([userLat, userLng], { icon: emergencyIcon })
       .addTo(map)
@@ -159,115 +194,92 @@ export default function PoliceMap({
         className: 'custom-popup'
       });
 
-    // Add hospital marker with enhanced popup
-    const _hospitalMarker = L.marker([hospitalLat, hospitalLng], { icon: hospitalIcon })
-      .addTo(map)
-      .bindPopup(`
-        <div style="
-          font-family: system-ui, -apple-system, sans-serif;
-          min-width: 200px;
-          padding: 8px;
-        ">
-          <div style="
-            text-align: center;
-            padding: 12px;
-            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-            border-radius: 8px;
-            margin-bottom: 8px;
-          ">
-            <div style="font-size: 32px; margin-bottom: 8px;">🏥</div>
-            <strong style="
-              font-size: 16px;
-              color: #1e40af;
-              display: block;
-              margin-bottom: 4px;
-            ">Hospital Location</strong>
-            <div style="
-              font-size: 11px;
-              color: #1e3a8a;
-              font-weight: 600;
-            ">DESTINATION POINT</div>
+    // Add hospital marker if coordinates exist
+    if (hospitalLat && hospitalLng) {
+      L.marker([hospitalLat, hospitalLng], { icon: hospitalIcon })
+        .addTo(map)
+        .bindPopup(`
+          <div style="font-family: system-ui, sans-serif; min-width: 200px; padding: 8px;">
+            <div style="text-align: center; padding: 12px; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-radius: 8px; margin-bottom: 8px;">
+              <div style="font-size: 32px; margin-bottom: 8px;">🏥</div>
+              <strong style="font-size: 16px; color: #1e40af; display: block; margin-bottom: 4px;">Hospital Location</strong>
+              <div style="font-size: 11px; color: #1e3a8a; font-weight: 600;">DESTINATION POINT</div>
+            </div>
           </div>
-          <div style="
-            font-size: 12px;
-            color: #6b7280;
-            text-align: center;
-            padding: 4px;
-          ">
-            📍 ${hospitalLat.toFixed(4)}, ${hospitalLng.toFixed(4)}
-          </div>
-        </div>
-      `, {
-        maxWidth: 250,
-        className: 'custom-popup'
-      });
+        `, { maxWidth: 250, className: 'custom-popup' });
+    }
 
-    // Draw route line with animation
-    const _routeLine = L.polyline(
-      [
-        [userLat, userLng],
-        [hospitalLat, hospitalLng],
-      ],
-      {
-        color: "#4f46e5",
-        weight: 5,
-        opacity: 0.7,
-        dashArray: "10, 10",
-        className: "route-line",
-      }
-    ).addTo(map);
+    // Add ambulance marker if coordinates exist
+    if (ambulanceLat && ambulanceLng) {
+      L.marker([ambulanceLat, ambulanceLng], { icon: ambulanceIcon })
+        .addTo(map)
+        .bindPopup(`
+           <div style="font-family: system-ui, sans-serif; min-width: 200px; padding: 8px;">
+            <div style="text-align: center; padding: 12px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 8px; margin-bottom: 8px;">
+              <div style="font-size: 32px; margin-bottom: 8px;">🚑</div>
+              <strong style="font-size: 16px; color: #92400e; display: block; margin-bottom: 4px;">Ambulance</strong>
+              <div style="font-size: 11px; color: #92400e; font-weight: 600;">LIVE TRACKING</div>
+            </div>
+           </div>
+        `, { maxWidth: 250, className: 'custom-popup' });
 
-    // Add a semi-transparent background line for better visibility
-    L.polyline(
-      [
-        [userLat, userLng],
-        [hospitalLat, hospitalLng],
-      ],
-      {
-        color: "#ffffff",
-        weight: 8,
+      // Fetch and draw route from Ambulance to Emergency
+      const fetchRoute = async () => {
+        try {
+          const response = await fetch(
+            `https://router.project-osrm.org/route/v1/driving/${ambulanceLng},${ambulanceLat};${userLng},${userLat}?overview=full&geometries=geojson`
+          );
+          const data = await response.json();
+          if (data.routes && data.routes.length > 0) {
+            const coordinates = data.routes[0].geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]] as [number, number]);
+
+            // Draw OSRM route
+            L.polyline(coordinates, {
+              color: "#4f46e5",
+              weight: 5,
+              opacity: 0.8,
+              dashArray: "10, 10",
+              className: "route-line",
+            }).addTo(map);
+
+            // Background line
+            L.polyline(coordinates, {
+              color: "#ffffff",
+              weight: 8,
+              opacity: 0.5,
+            }).addTo(map);
+          }
+        } catch (error) {
+          console.error("Error fetching ambulance route:", error);
+          // Fallback to straight line
+          L.polyline([[ambulanceLat, ambulanceLng], [userLat, userLng]], {
+            color: "#4f46e5",
+            weight: 5,
+            dashArray: "10, 10"
+          }).addTo(map);
+        }
+      };
+      fetchRoute();
+
+    } else if (hospitalLat && hospitalLng) {
+      // Fallback: If no ambulance, draw simple straight line from Emergency to Hospital (existing behavior)
+      L.polyline([[userLat, userLng], [hospitalLat, hospitalLng]], {
+        color: "#94a3b8", // Grayed out to indicate just direction
+        weight: 4,
         opacity: 0.5,
-      }
-    ).addTo(map);
+        dashArray: "5, 10",
+      }).addTo(map);
+    }
 
-    // Calculate distance
-    const distance = map.distance([userLat, userLng], [hospitalLat, hospitalLng]);
-    const distanceKm = (distance / 1000).toFixed(2);
-
-    // Add distance info marker at midpoint
-    const midLat = (userLat + hospitalLat) / 2;
-    const midLng = (userLng + hospitalLng) / 2;
-
-    const distanceIcon = L.divIcon({
-      className: "distance-info",
-      html: `
-        <div style="
-          background: white;
-          padding: 8px 16px;
-          border-radius: 20px;
-          border: 2px solid #4f46e5;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          font-family: system-ui;
-          font-weight: bold;
-          font-size: 12px;
-          color: #4f46e5;
-          white-space: nowrap;
-        ">
-          🚑 ${distanceKm} km
-        </div>
-      `,
-      iconSize: [100, 30],
-      iconAnchor: [50, 15],
-    });
-
-    L.marker([midLat, midLng], { icon: distanceIcon }).addTo(map);
-
-    // Fit bounds to show both markers with padding
+    // Fit bounds
     const bounds = L.latLngBounds([
-      [userLat, userLng],
-      [hospitalLat, hospitalLng],
+      [userLat, userLng]
     ]);
+    if (hospitalLat && hospitalLng) bounds.extend([hospitalLat, hospitalLng]);
+    if (ambulanceLat && ambulanceLng) bounds.extend([ambulanceLat, ambulanceLng]);
+
     map.fitBounds(bounds, { padding: [80, 80] });
+
 
     // Open emergency popup after a short delay
     setTimeout(() => {
@@ -307,13 +319,12 @@ export default function PoliceMap({
       }
       document.head.removeChild(style);
     };
-  }, [userLat, userLng, hospitalLat, hospitalLng]);
+  }, [userLat, userLng, hospitalLat, hospitalLng, ambulanceLat, ambulanceLng]);
 
   return (
     <div
       ref={containerRef}
-      className="w-full h-100 sm:h-125 lg:h-150 rounded-lg relative"
-      style={{ zIndex: 1 }}
+      className="w-full h-96 lg:h-[500px] rounded-lg relative z-10"
     />
   );
 }

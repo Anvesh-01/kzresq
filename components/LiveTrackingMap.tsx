@@ -30,7 +30,8 @@ const hospitalIcon = L.divIcon({
 function RecenterMap({ lat, lng }: { lat: number; lng: number }) {
     const map = useMap();
     useEffect(() => {
-        map.setView([lat, lng], map.getZoom(), {
+        const currentZoom = map.getZoom();
+        map.setView([lat, lng], currentZoom, {
             animate: true,
             duration: 1.5
         });
@@ -76,8 +77,8 @@ export default function LiveTrackingMap({ latitude, longitude, destLat, destLng,
             <MapContainer
                 center={[latitude, longitude]}
                 zoom={14}
-                style={{ height: '100%', width: '100%' }}
-                scrollWheelZoom={false}
+                style={{ height: '100%', width: '100%', minHeight: '400px' }}
+                scrollWheelZoom={true}
             >
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

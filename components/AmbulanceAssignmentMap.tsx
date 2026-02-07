@@ -14,8 +14,9 @@ type Props = {
     emergency: any;
     ambulances: any[];
     onAssign: (ambulanceId: string) => void;
-    isAssigning: boolean;
+    assigningAmbulanceId: string | null;
 };
+
 
 export default function AmbulanceAssignmentMap({
     isOpen,
@@ -23,8 +24,9 @@ export default function AmbulanceAssignmentMap({
     emergency,
     ambulances,
     onAssign,
-    isAssigning,
+    assigningAmbulanceId,
 }: Props) {
+
     const [sortedAmbulances, setSortedAmbulances] = useState<any[]>([]);
 
     useEffect(() => {
@@ -104,13 +106,21 @@ export default function AmbulanceAssignmentMap({
 
                                     <button
                                         onClick={() => onAssign(amb.id)}
-                                        disabled={isAssigning}
-                                        className={`w-full text-sm font-bold py-2 rounded-lg transition-colors ${amb.is_available
-                                            ? "bg-blue-600 hover:bg-blue-700 text-white"
-                                            : "bg-orange-600 hover:bg-orange-700 text-white"}`}
+                                        disabled={assigningAmbulanceId !== null || !amb.is_available}
+                                        className={`w-full text-sm font-bold py-2 rounded-lg transition-colors ${!amb.is_available
+                                                ? "bg-gray-400 cursor-not-allowed text-white"
+                                                : assigningAmbulanceId !== null
+                                                    ? "bg-gray-300 cursor-not-allowed text-gray-500"
+                                                    : "bg-blue-600 hover:bg-blue-700 text-white"
+                                            }`}
                                     >
-                                        {isAssigning ? "Assigning..." : amb.is_available ? "Assign This Ambulance" : "Assign to Busy Ambulance"}
+                                        {assigningAmbulanceId === amb.id
+                                            ? "Assigning..."
+                                            : !amb.is_available
+                                                ? "Currently Busy"
+                                                : "Assign This Ambulance"}
                                     </button>
+
                                 </div>
                             ))
                         ) : (
