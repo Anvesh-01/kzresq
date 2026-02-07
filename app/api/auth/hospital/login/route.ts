@@ -34,11 +34,11 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        console.log('✅ Hospital found:', { id: hospital.id, name: hospital.name, hasPasswordHash: !!hospital.password })
+        console.log('✅ Hospital found:', { id: hospital.id, name: hospital.name, hasPassword: !!hospital.password })
 
-        // Check if password hash exists
+        // Check if password exists
         if (!hospital.password) {
-            console.error('❌ Hospital password hash is missing:', { username, hospitalId: hospital.id })
+            console.error('❌ Hospital password is missing:', { username, hospitalId: hospital.id })
             return NextResponse.json(
                 { success: false, error: 'Account setup incomplete. Please contact administrator.' },
                 { status: 500 }
@@ -66,7 +66,8 @@ export async function POST(request: NextRequest) {
             .update({ last_login: new Date().toISOString() })
             .eq('id', hospital.id)
 
-        // Return hospital data (excluding password hash)
+        // Return hospital data (excluding password)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { password: _password, ...hospitalData } = hospital
 
         return NextResponse.json(

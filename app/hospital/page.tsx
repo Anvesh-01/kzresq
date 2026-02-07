@@ -1,27 +1,22 @@
 'use client';
-import Link from "next/link";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Bell,
   CheckCircle,
   MapPin,
   Phone,
   Clock,
-  LogOut,
   Ambulance,
   Calendar,
   User,
   Activity,
   FileText,
   AlertCircle,
-  X,
-  Search,
-  Filter
+  X
 } from "lucide-react";
-import EmergencyMap from "@/components/EmergencyMap";
 import AmbulanceAssignmentMap from '@/components/AmbulanceAssignmentMap';
-import { getHospitalSession, clearHospitalSession, type HospitalSession } from '@/lib/auth';
+import { getHospitalSession, clearHospitalSession } from '@/lib/auth-client';
+import type { HospitalSession } from '@/lib/auth';
 
 type AmbulanceType = {
   id: string;
@@ -93,7 +88,7 @@ const AMBULANCE_LOCATION_POLL_INTERVAL = 3000; // 3 seconds
 
 export default function HospitalDashboard() {
   const router = useRouter();
-  const [hospitalInfo, setHospitalInfo] = useState<HospitalSession | null>(() => {
+  const [hospitalInfo] = useState<HospitalSession | null>(() => {
     // Initialize with session data if available (client-side only)
     if (typeof window !== 'undefined') {
       return getHospitalSession();
@@ -128,6 +123,8 @@ export default function HospitalDashboard() {
   const [isAddingAmbulance, setIsAddingAmbulance] = useState(false);
 
   // ✅ FIX: Move getDistance function to component level (was inside areHospitalNamesSimilar)
+  // Distance calculation function (currently unused but kept for future features)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getDistance = useCallback((
     lat1: number,
     lon1: number,
@@ -432,7 +429,7 @@ export default function HospitalDashboard() {
 
   const handleLogout = () => {
     clearHospitalSession();
-    router.push('/login');
+    router.push('/hospital/login');
   };
 
   // ✅ FIX: Added loading state and better error handling
@@ -479,9 +476,9 @@ export default function HospitalDashboard() {
   };
 
   const [showAssignmentMap, setShowAssignmentMap] = useState(false);
-  const [selectedEmergencyForAssignment, setSelectedEmergencyForAssignment] = useState<any>(null);
+  const [selectedEmergencyForAssignment, setSelectedEmergencyForAssignment] = useState<SOSEmergency | null>(null);
 
-  const openAssignmentMap = (emergency: any) => {
+  const openAssignmentMap = (emergency: SOSEmergency) => {
     setSelectedEmergencyForAssignment(emergency);
     setShowAssignmentMap(true);
   };
@@ -661,13 +658,13 @@ export default function HospitalDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* HEADER */}
       <header className="bg-white/80 backdrop-blur-lg border-b border-gray-200 shadow-sm sticky top-0 z-50">
         <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-700 rounded-2xl flex items-center justify-center shadow-lg shadow-red-200">
+              <div className="w-12 h-12 bg-linear-to-br from-red-500 to-red-700 rounded-2xl flex items-center justify-center shadow-lg shadow-red-200">
                 <Activity className="w-7 h-7 text-white" strokeWidth={2.5} />
               </div>
               <div>
@@ -681,7 +678,7 @@ export default function HospitalDashboard() {
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-full border border-green-200">
+              <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-linear-to-r from-green-50 to-emerald-50 rounded-full border border-green-200">
                 <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-green-800 font-semibold text-sm">
                   {timeNow}
@@ -705,7 +702,7 @@ export default function HospitalDashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
           <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 lg:p-6">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-red-100 to-red-200 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-linear-to-br from-red-100 to-red-200 rounded-xl flex items-center justify-center">
                 <AlertCircle className="w-6 h-6 text-red-600" />
               </div>
               <span className="text-3xl font-black text-gray-900">
@@ -717,7 +714,7 @@ export default function HospitalDashboard() {
 
           <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 lg:p-6">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-linear-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center">
                 <CheckCircle className="w-6 h-6 text-blue-600" />
               </div>
               <span className="text-3xl font-black text-gray-900">
@@ -729,7 +726,7 @@ export default function HospitalDashboard() {
 
           <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 lg:p-6">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-linear-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center">
                 <Ambulance className="w-6 h-6 text-green-600" />
               </div>
               <span className="text-3xl font-black text-gray-900">{availableAmbulances.length}</span>
@@ -739,7 +736,7 @@ export default function HospitalDashboard() {
 
           <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 lg:p-6">
             <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-linear-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center">
                 <Ambulance className="w-6 h-6 text-purple-600" />
               </div>
               <span className="text-3xl font-black text-gray-900">
@@ -752,16 +749,16 @@ export default function HospitalDashboard() {
 
         {/* EMERGENCY ALERTS */}
         <section className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          <div className="px-6 py-5 bg-gradient-to-r from-red-50 to-red-100 border-b border-red-200 flex justify-between items-center">
+          <div className="px-6 py-5 bg-linear-to-r from-red-50 to-red-100 border-b border-red-200 flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-700 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 bg-linear-to-br from-red-500 to-red-700 rounded-xl flex items-center justify-center shadow-lg">
                 <AlertCircle className="w-6 h-6 text-white" />
               </div>
               <h2 className="text-xl font-black text-gray-900">
                 Emergency Alerts for Your Hospital
               </h2>
             </div>
-            <span className="bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+            <span className="bg-linear-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
               {emergencies.length} Total
             </span>
           </div>
@@ -792,7 +789,7 @@ export default function HospitalDashboard() {
                   >
                     <div className="flex justify-between items-start gap-4 mb-4">
                       <div className="flex items-center gap-4 flex-1">
-                        <div className="w-14 h-14 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center border border-gray-200 shadow-sm">
+                        <div className="w-14 h-14 bg-linear-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center border border-gray-200 shadow-sm">
                           <MapPin className="w-7 h-7 text-gray-700" />
                         </div>
                         <div className="flex-1">
@@ -868,7 +865,7 @@ export default function HospitalDashboard() {
                         <button
                           onClick={() => approveEmergency(emergency.id)}
                           disabled={isApproving}
-                          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                          className="bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                           aria-label="Approve and accept emergency request"
                         >
                           {isApproving ? 'Approving...' : '✓ Approve & Accept Emergency'}
@@ -887,7 +884,7 @@ export default function HospitalDashboard() {
                         )}
 
                       {emergency.status === 'dispatched' && emergency.assigned_ambulance_number && (
-                        <div className="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl border-2 border-green-300 shadow-md">
+                        <div className="flex items-center gap-3 px-5 py-3 bg-linear-to-r from-green-100 to-emerald-100 rounded-xl border-2 border-green-300 shadow-md">
                           <CheckCircle className="w-6 h-6 text-green-700" />
                           <p className="font-black text-sm text-green-800">
                             Dispatched: {emergency.assigned_ambulance_number}
@@ -906,7 +903,7 @@ export default function HospitalDashboard() {
         <section className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-700 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 bg-linear-to-br from-emerald-500 to-green-700 rounded-xl flex items-center justify-center shadow-lg">
                 <Ambulance className="w-6 h-6 text-white" />
               </div>
               <h2 className="text-xl font-black text-gray-900">
@@ -916,7 +913,7 @@ export default function HospitalDashboard() {
 
             <button
               onClick={() => setShowForm(!showForm)}
-              className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+              className="bg-linear-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
               aria-label={showForm ? 'Close add ambulance form' : 'Open add ambulance form'}
             >
               {showForm ? '✕ Cancel' : '+ Add Ambulance'}
@@ -924,7 +921,7 @@ export default function HospitalDashboard() {
           </div>
 
           {showForm && (
-            <div className="mt-6 bg-gradient-to-br from-emerald-50 to-green-50 p-6 rounded-2xl border-2 border-emerald-200 mb-6">
+            <div className="mt-6 bg-linear-to-br from-emerald-50 to-green-50 p-6 rounded-2xl border-2 border-emerald-200 mb-6">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                 <div>
                   <label htmlFor="vehicleNumber" className="text-xs font-bold text-gray-700 mb-2 block">
@@ -970,7 +967,7 @@ export default function HospitalDashboard() {
               <button
                 onClick={addAmbulance}
                 disabled={isAddingAmbulance}
-                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="w-full bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 aria-label="Save new ambulance"
               >
                 {isAddingAmbulance ? 'Saving...' : 'Save Ambulance'}
@@ -981,10 +978,10 @@ export default function HospitalDashboard() {
           {ambulances.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {ambulances.map(amb => (
-                <div key={amb.id} className="bg-gradient-to-br from-gray-50 to-gray-100 p-5 rounded-2xl border-2 border-gray-200 hover:border-emerald-300 hover:shadow-lg transition-all">
+                <div key={amb.id} className="bg-linear-to-br from-gray-50 to-gray-100 p-5 rounded-2xl border-2 border-gray-200 hover:border-emerald-300 hover:shadow-lg transition-all">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3 flex-1">
-                      <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-md">
+                      <div className="w-12 h-12 bg-linear-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-md">
                         <Ambulance className="w-6 h-6 text-white" />
                       </div>
                       <div className="flex-1">
@@ -993,8 +990,8 @@ export default function HospitalDashboard() {
                       </div>
                     </div>
                     <span className={`px-4 py-2 rounded-full font-bold text-xs whitespace-nowrap ${amb.is_available
-                      ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border-2 border-green-300'
-                      : 'bg-gradient-to-r from-orange-100 to-red-100 text-orange-800 border-2 border-orange-300'
+                      ? 'bg-linear-to-r from-green-100 to-emerald-100 text-green-800 border-2 border-green-300'
+                      : 'bg-linear-to-r from-orange-100 to-red-100 text-orange-800 border-2 border-orange-300'
                       }`}>
                       {amb.is_available ? 'Available' : 'On Route'}
                     </span>
@@ -1018,14 +1015,14 @@ export default function HospitalDashboard() {
         <section className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 sm:p-6 lg:p-8">
           <div className="flex items-center justify-between mb-4 lg:mb-6">
             <div className="flex items-center gap-2 lg:gap-3">
-              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg lg:rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-linear-to-br from-purple-100 to-purple-200 rounded-lg lg:rounded-xl flex items-center justify-center">
                 <Calendar className="w-5 h-5 lg:w-6 lg:h-6 text-purple-600" />
               </div>
               <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-gray-900">
                 Appointment Requests
               </h2>
             </div>
-            <span className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-3 sm:px-4 lg:px-5 py-1.5 lg:py-2 rounded-full text-sm font-bold shadow-lg">
+            <span className="bg-linear-to-r from-purple-500 to-purple-600 text-white px-3 sm:px-4 lg:px-5 py-1.5 lg:py-2 rounded-full text-sm font-bold shadow-lg">
               {appointments.length} Pending
             </span>
           </div>
@@ -1035,7 +1032,7 @@ export default function HospitalDashboard() {
               {appointments.map((appt) => (
                 <div
                   key={appt.id}
-                  className="bg-gradient-to-r from-gray-50 to-white p-4 lg:p-6 rounded-xl lg:rounded-2xl border-2 border-gray-200 hover:border-purple-300 transition-all shadow-md hover:shadow-lg"
+                  className="bg-linear-to-r from-gray-50 to-white p-4 lg:p-6 rounded-xl lg:rounded-2xl border-2 border-gray-200 hover:border-purple-300 transition-all shadow-md hover:shadow-lg"
                 >
                   {/* Patient Info */}
                   <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 mb-4 lg:mb-5">
@@ -1091,7 +1088,7 @@ export default function HospitalDashboard() {
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4">
                     <button
                       onClick={() => openApproveModal(appt)}
-                      className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2.5 rounded-lg font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                      className="flex-1 bg-linear-to-r from-green-600 to-emerald-600 text-white px-4 py-2.5 rounded-lg font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
                       aria-label="Approve and assign appointment"
                     >
                       <CheckCircle className="w-4 h-4" />
@@ -1099,7 +1096,7 @@ export default function HospitalDashboard() {
                     </button>
                     <button
                       onClick={() => rejectAppointment(appt.id)}
-                      className="flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2.5 rounded-lg font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                      className="flex-1 bg-linear-to-r from-red-500 to-red-600 text-white px-4 py-2.5 rounded-lg font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
                       aria-label="Reject appointment"
                     >
                       <X className="w-4 h-4" />
@@ -1109,7 +1106,7 @@ export default function HospitalDashboard() {
                       href={`https://www.google.com/maps?q=${appt.user_lat},${appt.user_lng}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2.5 rounded-lg font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                      className="flex-1 bg-linear-to-r from-blue-500 to-blue-600 text-white px-4 py-2.5 rounded-lg font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
                       aria-label="View patient location on map"
                     >
                       <MapPin className="w-4 h-4" />
@@ -1185,7 +1182,7 @@ export default function HospitalDashboard() {
                 <button
                   onClick={approveAppointment}
                   disabled={isApproving}
-                  className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-3 rounded-lg font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-linear-to-r from-green-600 to-emerald-600 text-white px-4 py-3 rounded-lg font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="Confirm appointment approval"
                 >
                   {isApproving ? 'Approving...' : 'Confirm Approval'}
@@ -1209,7 +1206,7 @@ export default function HospitalDashboard() {
           onClose={() => setShowAssignmentMap(false)}
           emergency={selectedEmergencyForAssignment}
           ambulances={availableAmbulances}
-          onAssign={(ambulanceId) => dispatchAmbulance(selectedEmergencyForAssignment.id, ambulanceId)}
+          onAssign={(ambulanceId) => selectedEmergencyForAssignment && dispatchAmbulance(selectedEmergencyForAssignment.id, ambulanceId)}
           isAssigning={isDispatching}
         />
 

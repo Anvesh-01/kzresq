@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
 
 export async function middleware(req: NextRequest) {
   // const host = req.headers.get("host") || "";

@@ -1,0 +1,18 @@
+🔍 Checking hospital table schema...
+
+📋 Available fields in hospitals table:
+id, name, address, latitude, longitude, phone, emergency_capacity, is_active, created_at, username, password
+
+Has 'password' field: ✅ Yes
+Has 'password_hash' field: ❌ No
+
+🔐 Setting test password for hospital261...
+Using field: password
+✅ Password set successfully!
+
+============================================================
+TEST CREDENTIALS:
+Username: hospital261
+Password: hospital123
+Field used: password
+============================================================
