@@ -22,6 +22,12 @@ import {
 import EmergencyMap from "@/components/EmergencyMap";
 import AmbulanceAssignmentMap from '@/components/AmbulanceAssignmentMap';
 import { getHospitalSession, clearHospitalSession, type HospitalSession } from '@/lib/auth';
+import dynamic from 'next/dynamic';
+
+const LiveTrackingMap = dynamic(() => import('@/components/LiveTrackingMap'), {
+  ssr: false,
+  loading: () => <div className="w-full h-48 bg-gray-100 flex items-center justify-center rounded-xl animate-pulse text-gray-400 font-bold">Loading Live Map...</div>
+});
 
 type AmbulanceType = {
   id: string;
@@ -120,6 +126,19 @@ export default function HospitalDashboard() {
   const [isApproving, setIsApproving] = useState(false);
   const [isDispatching, setIsDispatching] = useState(false);
   const [isAddingAmbulance, setIsAddingAmbulance] = useState(false);
+
+  // Helper to find ambulance ID by number and track it
+  const trackAmbulanceByNumber = (vehicleNumber: string) => {
+    const amb = ambulances.find(a => a.vehicle_number === vehicleNumber);
+    if (amb) {
+      setTrackedAmbulanceId(amb.id);
+      // Scroll to the top or where the live location is shown?
+      // For now, just alert or visual feedback is enough.
+      console.log(`Tracking ambulance: ${vehicleNumber} (${amb.id})`);
+    } else {
+      alert(`Ambulance ${vehicleNumber} not found in your list.`);
+    }
+  };
 
   // ✅ FIX: Move getDistance function to component level (was inside areHospitalNamesSimilar)
   const getDistance = useCallback((
@@ -827,22 +846,54 @@ export default function HospitalDashboard() {
                       </div>
                     )}
 
-                    {/* ✅ NEW: Display live ambulance location if being tracked */}
+                    {/* ✅ FIX: Display live ambulance location with resilient checks */}
                     {emergency.status === 'dispatched' &&
                       emergency.assigned_ambulance_number &&
-                      ambulanceLocation &&
-                      trackedAmbulanceId && (
-                        <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Ambulance className="w-4 h-4 text-green-600" />
-                            <span className="font-bold text-sm text-green-900">Live Ambulance Location:</span>
+                      trackedAmbulanceId &&
+                      ambulanceLocation?.latitude != null && // Safer property check
+                      ambulances.find(a => a.id === trackedAmbulanceId)?.vehicle_number === emergency.assigned_ambulance_number && (
+                        <div className="mb-4 p-4 bg-green-50 rounded-2xl border-2 border-green-400 shadow-lg animate-pulse-subtle">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                <Ambulance className="w-4 h-4 text-green-600" />
+                              </div>
+                              <span className="font-black text-sm text-green-900 uppercase tracking-wider">Live Tracking: {emergency.assigned_ambulance_number}</span>
+                            </div>
+                            <button
+                              onClick={() => setTrackedAmbulanceId(null)}
+                              className="bg-white hover:bg-red-50 text-red-600 px-3 py-1 rounded-lg text-xs font-bold border border-red-200 transition-colors shadow-sm"
+                            >
+                              ✕ Stop
+                            </button>
                           </div>
-                          <p className="text-sm text-gray-700 ml-6">
-                            📍 {ambulanceLocation.latitude.toFixed(4)}, {ambulanceLocation.longitude.toFixed(4)}
-                          </p>
-                          <p className="text-xs text-gray-600 ml-6 mt-1">
-                            Updated: {new Date(ambulanceLocation.updated_at).toLocaleTimeString()}
-                          </p>
+
+                          {/* Map View */}
+                          <div className="h-[450px] mb-4">
+                            <LiveTrackingMap
+                              latitude={ambulanceLocation.latitude}
+                              longitude={ambulanceLocation.longitude}
+                              destLat={emergency.assigned_hospital_lat}
+                              destLng={emergency.assigned_hospital_lng}
+                              isHospital={true}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-white p-2 rounded-xl border border-green-100">
+                              <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Position</p>
+                              <p className="text-xs text-gray-700 font-mono font-bold">
+                                {ambulanceLocation.latitude.toFixed(6)}, {ambulanceLocation.longitude.toFixed(6)}
+                              </p>
+                            </div>
+                            <div className="bg-white p-2 rounded-xl border border-green-100">
+                              <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Status</p>
+                              <p className="text-xs text-gray-700 font-bold flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-green-500" />
+                                {new Date(ambulanceLocation.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       )}
 
@@ -880,12 +931,20 @@ export default function HospitalDashboard() {
                         )}
 
                       {emergency.status === 'dispatched' && emergency.assigned_ambulance_number && (
-                        <div className="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl border-2 border-green-300 shadow-md">
-                          <CheckCircle className="w-6 h-6 text-green-700" />
-                          <p className="font-black text-sm text-green-800">
-                            Dispatched: {emergency.assigned_ambulance_number}
+                        <button
+                          onClick={() => trackAmbulanceByNumber(emergency.assigned_ambulance_number!)}
+                          className={`flex items-center gap-3 px-5 py-3 rounded-xl border-2 transition-all shadow-md hover:scale-105 active:scale-95 ${trackedAmbulanceId && ambulances.find(a => a.id === trackedAmbulanceId)?.vehicle_number === emergency.assigned_ambulance_number
+                            ? "bg-green-600 border-green-700 text-white"
+                            : "bg-gradient-to-r from-green-50 to-emerald-50 border-green-300 text-green-800 hover:bg-green-100"
+                            }`}
+                        >
+                          <Activity className={`w-5 h-5 ${trackedAmbulanceId && ambulances.find(a => a.id === trackedAmbulanceId)?.vehicle_number === emergency.assigned_ambulance_number ? "animate-spin" : ""}`} />
+                          <p className="font-black text-sm">
+                            {trackedAmbulanceId && ambulances.find(a => a.id === trackedAmbulanceId)?.vehicle_number === emergency.assigned_ambulance_number
+                              ? "Tracking Live..."
+                              : `Track: ${emergency.assigned_ambulance_number}`}
                           </p>
-                        </div>
+                        </button>
                       )}
                     </div>
                   </div>
@@ -992,9 +1051,22 @@ export default function HospitalDashboard() {
                       {amb.is_available ? 'Available' : 'On Route'}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-gray-600 text-sm">
-                    <Phone className="w-4 h-4" />
-                    <span className="font-semibold">{amb.driver_phone}</span>
+                  <div className="flex items-center justify-between gap-2 text-gray-600 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-4 h-4" />
+                      <span className="font-semibold">{amb.driver_phone}</span>
+                    </div>
+                    {!amb.is_available && (
+                      <button
+                        onClick={() => setTrackedAmbulanceId(amb.id)}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${trackedAmbulanceId === amb.id
+                          ? "bg-green-600 text-white shadow-inner"
+                          : "bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100"
+                          }`}
+                      >
+                        {trackedAmbulanceId === amb.id ? "Tracking..." : "Track Live"}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1201,7 +1273,7 @@ export default function HospitalDashboard() {
           isOpen={showAssignmentMap}
           onClose={() => setShowAssignmentMap(false)}
           emergency={selectedEmergencyForAssignment}
-          ambulances={availableAmbulances}
+          ambulances={ambulances}
           onAssign={(ambulanceId) => dispatchAmbulance(selectedEmergencyForAssignment.id, ambulanceId)}
           isAssigning={isDispatching}
         />
