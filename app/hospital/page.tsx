@@ -19,7 +19,8 @@ import {
   X,
   Search,
   Filter,
-  Shield
+  Shield,
+  Droplet
 } from "lucide-react";
 import AmbulanceAssignmentMap from '@/components/AmbulanceAssignmentMap';
 import { getHospitalSession, clearHospitalSession } from '@/lib/auth-client';
@@ -138,11 +139,11 @@ export default function HospitalDashboard() {
   const trackAmbulanceByNumber = (vehicleNumber: string) => {
     const amb = ambulances.find(a => a.vehicle_number === vehicleNumber);
     if (amb) {
+      console.log(`🚑 Starting tracking for ambulance: ${vehicleNumber} (ID: ${amb.id})`);
+      console.log(`📍 Current ambulance data:`, amb);
       setTrackedAmbulanceId(amb.id);
-      // Scroll to the top or where the live location is shown?
-      // For now, just alert or visual feedback is enough.
-      console.log(`Tracking ambulance: ${vehicleNumber} (${amb.id})`);
     } else {
+      console.error(`❌ Ambulance ${vehicleNumber} not found in list. Available ambulances:`, ambulances.map(a => a.vehicle_number));
       alert(`Ambulance ${vehicleNumber} not found in your list.`);
     }
   };
@@ -410,22 +411,28 @@ export default function HospitalDashboard() {
 
     const fetchAmbulanceLocation = async () => {
       try {
+        console.log(`📡 Fetching location for ambulance ID: ${trackedAmbulanceId}`);
         const res = await fetch(
           `/api/ambulance-location?ambulance_id=${trackedAmbulanceId}`
         );
 
         if (!res.ok) {
+          console.error(`❌ Location fetch failed with status: ${res.status}`);
           throw new Error(`HTTP error! status: ${res.status}`);
         }
 
         const data = await res.json();
+        console.log(`✅ Location data received:`, data);
 
         if (isMounted && data.success) {
+          console.log(`📍 Setting ambulance location:`, data.data);
           setAmbulanceLocation(data.data);
+        } else if (!data.success) {
+          console.warn(`⚠️ API returned success=false:`, data);
         }
       } catch (err) {
         if (isMounted) {
-          console.error('Error fetching ambulance location:', err);
+          console.error('❌ Error fetching ambulance location:', err);
         }
       }
     };
@@ -1041,8 +1048,52 @@ export default function HospitalDashboard() {
                                   <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Status</p>
                                   <p className="text-xs text-gray-700 font-bold flex items-center gap-1">
                                     <Clock className="w-3 h-3 text-green-500" />
-                                    {new Date(ambulanceLocation.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                    {ambulanceLocation.updated_at
+                                      ? new Date(ambulanceLocation.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                                      : 'Updating...'
+                                    }
                                   </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                        {/* 🔄 Loading state: Tracking active but no location data yet */}
+                        {emergency.status === 'dispatched' &&
+                          emergency.assigned_ambulance_number &&
+                          trackedAmbulanceId &&
+                          (!ambulanceLocation || ambulanceLocation?.latitude == null) &&
+                          ambulances.find(a => a.id === trackedAmbulanceId)?.vehicle_number === emergency.assigned_ambulance_number && (
+                            <div className="mb-4 p-4 bg-blue-50 rounded-2xl border-2 border-blue-400 shadow-lg">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center animate-pulse">
+                                    <Ambulance className="w-4 h-4 text-blue-600" />
+                                  </div>
+                                  <span className="font-bold text-sm text-blue-900 uppercase tracking-wider">Connecting to {emergency.assigned_ambulance_number}...</span>
+                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setTrackedAmbulanceId(null);
+                                  }}
+                                  className="bg-white hover:bg-red-50 text-red-600 px-3 py-1 rounded-lg text-xs font-bold border border-red-200 transition-colors shadow-sm"
+                                >
+                                  ✕ Stop
+                                </button>
+                              </div>
+
+                              <div className="bg-white p-4 rounded-xl border border-blue-200">
+                                <div className="flex items-center gap-3">
+                                  <div className="animate-spin">
+                                    <Activity className="w-5 h-5 text-blue-600" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-bold text-blue-900">Waiting for GPS signal...</p>
+                                    <p className="text-xs text-blue-700 mt-1">
+                                      The ambulance driver needs to open the ambulance app and enable location permissions.
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -1134,6 +1185,142 @@ export default function HospitalDashboard() {
                   </div>
                 );
               })
+            )}
+          </div>
+        </section>
+
+        {/* APPOINTMENTS SECTION */}
+        <section className="bg-white/70 backdrop-blur-xl rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 overflow-hidden animate-slide-up delay-650">
+          <div className="px-5 sm:px-8 py-6 sm:py-8 bg-gradient-to-br from-blue-900 via-indigo-950 to-blue-950 border-b border-white/5 flex justify-between items-center relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 blur-[100px] -mr-32 -mt-32"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/5 blur-[80px] -ml-24 -mb-24"></div>
+
+            <div className="flex items-center gap-4 sm:gap-6 relative z-10">
+              <div className="relative">
+                <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full animate-pulse-subtle"></div>
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/5 backdrop-blur-2xl rounded-2xl flex items-center justify-center shadow-2xl border border-white/10 relative overflow-hidden group-hover:border-blue-500/30 transition-colors duration-500">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent"></div>
+                  <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400 group-hover:scale-110 transition-transform duration-500" />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                  <span className="text-[10px] font-bold text-blue-500 uppercase tracking-[0.2em]">Scheduled</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tightest">
+                  APPOINTMENT <span className="text-blue-500">REQUESTS</span>
+                </h2>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 opacity-60">Patient Intake Management</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 relative z-10 shrink-0">
+              <div className="bg-blue-500/10 backdrop-blur-xl px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl text-blue-400 text-[10px] sm:text-xs font-bold border border-blue-500/20 tracking-widest shadow-[0_0_20px_rgba(59,130,246,0.1)]">
+                {appointments.length} PENDING
+              </div>
+            </div>
+          </div>
+
+          <div className="divide-y divide-gray-50">
+            {appointments.length === 0 ? (
+              <div className="p-12 text-center">
+                <div className="flex items-center justify-center gap-4 group cursor-pointer mb-6">
+                  <div className="relative w-10 h-10 transition-transform duration-500 group-hover:scale-110">
+                    <Image
+                      src="/KenLogo1.png"
+                      alt="KEN Health"
+                      fill
+                      className="object-contain"
+                    />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 tracking-tight">No Pending Appointments</h3>
+                </div>
+                <p className="text-sm text-gray-400 font-bold max-w-xs mx-auto">New appointment requests will appear here for review and approval.</p>
+              </div>
+            ) : (
+              appointments.map((appointment) => (
+                <div
+                  key={appointment.id}
+                  className="p-5 sm:p-6 lg:p-8 hover:bg-blue-50/30 transition-all duration-300 group relative overflow-hidden"
+                >
+                  <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center shrink-0 border border-blue-100">
+                          <User className="w-6 h-6 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-bold text-gray-900 mb-1">{appointment.user_name || 'Anonymous'}</h3>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                            <span className="flex items-center gap-1">
+                              <Phone className="w-3.5 h-3.5" />
+                              {appointment.user_phone}
+                            </span>
+                            {appointment.blood_group && (
+                              <span className="flex items-center gap-1 px-2 py-1 bg-red-50 text-red-700 rounded-lg font-semibold">
+                                <Droplet className="w-3.5 h-3.5" />
+                                {appointment.blood_group}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-16">
+                        <div className="flex items-center gap-2 text-sm">
+                          <FileText className="w-4 h-4 text-gray-400" />
+                          <span className="font-semibold text-gray-700">{appointment.issue_type}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Clock className="w-4 h-4 text-gray-400" />
+                          <span className="text-gray-600">
+                            {appointment.appointment_time
+                              ? new Date(appointment.appointment_time).toLocaleString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })
+                              : 'Time not set'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {appointment.description && (
+                        <div className="pl-16 text-sm text-gray-600 bg-gray-50 p-3 rounded-xl">
+                          <p className="font-medium">{appointment.description}</p>
+                        </div>
+                      )}
+
+                      {appointment.medical_conditions && (
+                        <div className="pl-16 text-xs text-orange-700 bg-orange-50 p-3 rounded-xl border border-orange-100">
+                          <span className="font-bold uppercase tracking-wider">Medical Conditions:</span> {appointment.medical_conditions}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-3 lg:flex-col lg:w-48">
+                      <button
+                        onClick={() => openApproveModal(appointment)}
+                        className="flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg shadow-emerald-950/10 transition-all hover:scale-[1.02] active:scale-95 border-b-2 border-emerald-800"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => rejectAppointment(appointment.id)}
+                        className="flex items-center justify-center gap-2 px-5 py-3 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl text-xs font-bold uppercase tracking-widest border-2 border-red-200 transition-all hover:scale-[1.02] active:scale-95"
+                      >
+                        <X className="w-4 h-4" />
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </section>
@@ -1267,7 +1454,7 @@ export default function HospitalDashboard() {
           )}
         </section>
 
-        {/* APPOINTMENT REQUESTS SECTION */}
+        {/* APPOINTMENT REQUESTS SECTION
         <section className="bg-white/70 backdrop-blur-xl rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 p-5 sm:p-6 lg:p-8 animate-slide-up delay-800">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div className="flex items-center gap-4">
@@ -1295,104 +1482,104 @@ export default function HospitalDashboard() {
                   key={appt.id}
                   className="bg-white/60 backdrop-blur-sm p-6 rounded-3xl border border-white/60 hover:border-emerald-200 hover:bg-emerald-50/50 transition-all duration-300 group shadow-lg hover:shadow-emerald-900/5 mb-4"
                 >
-                  {/* Patient Info */}
-                  <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
-                    <div className="flex-1 w-full flex items-center gap-4">
-                      <div className="w-14 h-14 bg-gradient-to-br from-teal-50 to-emerald-100 rounded-2xl flex items-center justify-center border border-teal-100 shadow-sm shrink-0">
-                        <User className="w-7 h-7 text-teal-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-900 tracking-tight mb-1">
-                          {appt.user_name || 'Patient Intake'}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                          <div className="flex items-center gap-1.5 font-bold">
-                            <Phone className="w-3.5 h-3.5 text-teal-500" />
-                            {appt.user_phone}
-                          </div>
-                          {appt.blood_group && (
-                            <div className="flex items-center gap-1.5 font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-lg border border-red-100">
-                              <Activity className="w-3.5 h-3.5" />
-                              {appt.blood_group}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 bg-gray-50 px-3 py-1 rounded-lg">
-                      {new Date(appt.created_at).toLocaleString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })}
-                    </div>
-                  </div>
+        //           {/* Patient Info */}
+        {/* //           <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
+        //             <div className="flex-1 w-full flex items-center gap-4">
+        //               <div className="w-14 h-14 bg-gradient-to-br from-teal-50 to-emerald-100 rounded-2xl flex items-center justify-center border border-teal-100 shadow-sm shrink-0">
+        //                 <User className="w-7 h-7 text-teal-600" />
+        //               </div>
+        //               <div>
+        //                 <h3 className="text-xl font-bold text-gray-900 tracking-tight mb-1">
+        //                   {appt.user_name || 'Patient Intake'}
+        //                 </h3>
+        //                 <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+        //                   <div className="flex items-center gap-1.5 font-bold">
+        //                     <Phone className="w-3.5 h-3.5 text-teal-500" />
+        //                     {appt.user_phone}
+        //                   </div>
+        //                   {appt.blood_group && ( */}
+        {/* //                     <div className="flex items-center gap-1.5 font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-lg border border-red-100">
+        //                       <Activity className="w-3.5 h-3.5" />
+        //                       {appt.blood_group}
+        //                     </div>
+        //                   )}
+        //                 </div>
+        //               </div> */}
+        {/* //             </div>
+        //             <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 bg-gray-50 px-3 py-1 rounded-lg">
+        //               {new Date(appt.created_at).toLocaleString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })}
+        //             </div>
+        //           </div> */}
 
-                  {/* Medical Issue */}
-                  {/* Medical History */}
-                  <div className="bg-gray-50/50 backdrop-blur-sm p-4 sm:p-6 rounded-[2rem] border border-gray-100 flex flex-col md:flex-row gap-6">
-                    <div className="flex-1 space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-[1rem] bg-emerald-50 flex items-center justify-center text-emerald-600">
-                          <Activity className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Issue Overview</p>
-                          <p className="text-sm font-bold text-gray-900 uppercase tracking-widest">{appt.issue_type}</p>
-                        </div>
-                      </div>
-                      <div className="p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Patient History</p>
-                        <p className="text-sm font-bold text-gray-700">{appt.medical_conditions || "No previous history recorded."}</p>
-                      </div>
-                    </div>
-                    <div className="flex-1 p-4 sm:p-6 bg-gray-900 rounded-[2rem] text-white shadow-xl shadow-gray-950/20">
-                      <div className="flex items-center gap-3 mb-4">
-                        <MapPin className="w-5 h-5 text-emerald-400" />
-                        <h4 className="text-sm font-bold uppercase tracking-widest">Location Data</h4>
-                      </div>
-                      <div className="space-y-2 opacity-80">
-                        <p className="text-[10px] font-bold uppercase tracking-widest">Coordinates</p>
-                        <p className="text-xs font-mono">{appt.user_lat.toFixed(4)}, {appt.user_lng.toFixed(4)}</p>
-                        <p className="text-xs pt-2 border-t border-white/10 italic">Request initiated from user mobile.</p>
-                      </div>
-                    </div>
-                  </div>
+        {/* //           {/* Medical Issue */}
+        //           {/* Medical History */}
+        {/* //           <div className="bg-gray-50/50 backdrop-blur-sm p-4 sm:p-6 rounded-[2rem] border border-gray-100 flex flex-col md:flex-row gap-6">
+        //             <div className="flex-1 space-y-4">
+        //               <div className="flex items-center gap-3">
+        //                 <div className="w-10 h-10 rounded-[1rem] bg-emerald-50 flex items-center justify-center text-emerald-600">
+        //                   <Activity className="w-5 h-5" />
+        //                 </div>
+        //                 <div>
+        //                   <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Issue Overview</p>
+        //                   <p className="text-sm font-bold text-gray-900 uppercase tracking-widest">{appt.issue_type}</p>
+        //                 </div>
+        //               </div>
+        //               <div className="p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+        //                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Patient History</p>
+        //                 <p className="text-sm font-bold text-gray-700">{appt.medical_conditions || "No previous history recorded."}</p>
+        //               </div>
+        //             </div>
+        //             <div className="flex-1 p-4 sm:p-6 bg-gray-900 rounded-[2rem] text-white shadow-xl shadow-gray-950/20">
+        //               <div className="flex items-center gap-3 mb-4">
+        //                 <MapPin className="w-5 h-5 text-emerald-400" />
+        //                 <h4 className="text-sm font-bold uppercase tracking-widest">Location Data</h4>
+        //               </div>
+        //               <div className="space-y-2 opacity-80">
+        //                 <p className="text-[10px] font-bold uppercase tracking-widest">Coordinates</p>
+        //                 <p className="text-xs font-mono">{appt.user_lat.toFixed(4)}, {appt.user_lng.toFixed(4)}</p>
+        //                 <p className="text-xs pt-2 border-t border-white/10 italic">Request initiated from user mobile.</p>
+        //               </div>
+        //             </div>
+        //           </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mt-8">
-                    <button
-                      onClick={() => openApproveModal(appt)}
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-4 sm:px-8 py-4 rounded-2xl font-bold text-[10px] sm:text-xs uppercase tracking-widest shadow-lg shadow-emerald-950/20 transform hover:scale-[1.02] active:scale-95 transition-all duration-500 flex items-center justify-center gap-2 border-b-4 border-emerald-800"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      Approve Intake
-                    </button>
-                    <button
-                      onClick={() => rejectAppointment(appt.id)}
-                      className="flex-1 bg-white hover:bg-gray-50 text-gray-900 px-4 sm:px-8 py-4 rounded-2xl font-bold text-[10px] sm:text-xs uppercase tracking-widest border-2 border-gray-100 shadow-sm transition-all duration-500 flex items-center justify-center gap-2"
-                    >
-                      <X className="w-4 h-4" />
-                      Reject Intake
-                    </button>
-                    <a
-                      href={`https://www.google.com/maps?q=${appt.user_lat},${appt.user_lng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-900 px-4 sm:px-8 py-4 rounded-2xl font-bold text-[10px] sm:text-xs uppercase tracking-widest shadow-sm transition-all duration-500 flex items-center justify-center gap-2"
-                    >
-                      <MapPin className="w-4 h-4 text-emerald-600" />
-                      Patient OSINT
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <Calendar className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-              <p>No pending appointment requests</p>
-            </div>
-          )}
-        </section>
+        //           {/* Action Buttons */}
+        //           {/* <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mt-8">
+        //             <button
+        //               onClick={() => openApproveModal(appt)} */}
+        //               {/* className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-4 sm:px-8 py-4 rounded-2xl font-bold text-[10px] sm:text-xs uppercase tracking-widest shadow-lg shadow-emerald-950/20 transform hover:scale-[1.02] active:scale-95 transition-all duration-500 flex items-center justify-center gap-2 border-b-4 border-emerald-800"
+        //             >
+        //               <CheckCircle className="w-4 h-4" />
+        //               Approve Intake
+        //             </button>
+        //             <button
+        //               onClick={() => rejectAppointment(appt.id)}
+        //               className="flex-1 bg-white hover:bg-gray-50 text-gray-900 px-4 sm:px-8 py-4 rounded-2xl font-bold text-[10px] sm:text-xs uppercase tracking-widest border-2 border-gray-100 shadow-sm transition-all duration-500 flex items-center justify-center gap-2"
+        //             >
+        //               <X className="w-4 h-4" />
+        //               Reject Intake
+        //             </button>
+        //             <a
+        //               href={`https://www.google.com/maps?q=${appt.user_lat},${appt.user_lng}`}
+        //               target="_blank"
+        //               rel="noopener noreferrer"
+        //               className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-900 px-4 sm:px-8 py-4 rounded-2xl font-bold text-[10px] sm:text-xs uppercase tracking-widest shadow-sm transition-all duration-500 flex items-center justify-center gap-2"
+        //             >
+        //               <MapPin className="w-4 h-4 text-emerald-600" />
+        //               Patient OSINT
+        //             </a>
+        //           </div>
+        //         </div>
+        //       ))}
+        //     </div>
+        //   ) : (
+        //     <div className="text-center py-8 text-gray-500">
+        //       <Calendar className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+        //       <p>No pending appointment requests</p>
+        //     </div>
+        //   )}
+        // </section> */}
 
-        {/* APPROVAL MODAL */}
+        //APPROVAL MODAL
         {showApproveModal && selectedAppointment && (
           <div
             className="fixed inset-0 bg-emerald-950/60 backdrop-blur-xl flex items-center justify-center z-[100] p-3 sm:p-4 animate-premium-blur-in"

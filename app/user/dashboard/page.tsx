@@ -166,15 +166,15 @@ export default function UserDashboard() {
               }),
             });
             const data = await res.json();
-            const nearby = data.slice(0, 10).map((h: any, idx: number) => ({
-              id: h.id || `hospital-${idx}`,
+
+            // Map the hospital data from the API (which already includes calculated distances)
+            const nearby = data.slice(0, 10).map((h: any) => ({
+              id: h.id,
               name: h.name,
-              distance: `${(Math.random() * 5 + 0.5).toFixed(1)} km`,
-              doctor: ["Cardiologist", "General Physician", "Orthopaedic"][
-                idx % 3
-              ],
-              lat: h.lat,
-              lng: h.lng,
+              distance: `${h.distance.toFixed(1)} km`, // Use the actual distance from API
+              doctor: h.specialties || "General Physician", // Use specialties if available
+              lat: h.latitude, // Correct field name
+              lng: h.longitude, // Correct field name
             }));
             setHospitals(nearby);
           } catch (error) {
@@ -217,8 +217,23 @@ export default function UserDashboard() {
         navigator.geolocation.getCurrentPosition(resolve, reject);
       });
 
+      // Convert 12-hour time format (e.g., "09:00 AM") to 24-hour format (e.g., "09:00")
+      const convertTo24Hour = (time12h: string): string => {
+        const [time, period] = time12h.split(' ');
+        let [hours, minutes] = time.split(':');
+
+        if (period === 'PM' && hours !== '12') {
+          hours = String(parseInt(hours) + 12);
+        } else if (period === 'AM' && hours === '12') {
+          hours = '00';
+        }
+
+        return `${hours.padStart(2, '0')}:${minutes}`;
+      };
+
       // Combine date and time into a timestamp
-      const appointmentDateTime = `${selectedDate}T${selectedTime}:00`;
+      const time24h = convertTo24Hour(selectedTime);
+      const appointmentDateTime = `${selectedDate}T${time24h}:00`;
 
       // Call the API to create appointment
       const response = await fetch("/api/appointments", {
@@ -236,6 +251,7 @@ export default function UserDashboard() {
           hospital_lng: selectedHospital.lng,
           user_lat: position.coords.latitude,
           user_lng: position.coords.longitude,
+          appointment_time: appointmentDateTime, // Add the appointment time
         }),
       });
 

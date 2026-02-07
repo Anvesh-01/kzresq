@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        return NextResponse.json({ success: true, appointments: data });
+        return NextResponse.json({ success: true, data: data });
     } catch (error) {
         console.error('Error in GET /api/appointments:', error);
         return NextResponse.json(
@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
             hospital_lng,
             user_lat,
             user_lng,
+            appointment_time,
         } = body;
 
         // Validation
@@ -99,6 +100,7 @@ export async function POST(request: NextRequest) {
                     hospital_lng,
                     user_lat,
                     user_lng,
+                    appointment_time,
                     status: 'pending',
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),

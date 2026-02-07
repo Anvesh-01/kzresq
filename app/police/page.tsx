@@ -82,6 +82,7 @@ const EmergencyRouteMap = ({
   hospitalName,
   ambulanceLat,
   ambulanceLng,
+  isTracking,
 }: {
   emergencyLat: number;
   emergencyLng: number;
@@ -90,6 +91,7 @@ const EmergencyRouteMap = ({
   hospitalName?: string | null;
   ambulanceLat?: number | null;
   ambulanceLng?: number | null;
+  isTracking?: boolean;
 }) => {
   const { t } = useLanguage();
 
@@ -104,6 +106,7 @@ const EmergencyRouteMap = ({
             <h3 className="font-bold text-lg text-gray-900">{t('police.emergencyLocation')}</h3>
           </div>
 
+          {/* Live Tracking Map - When GPS data is available */}
           {ambulanceLat && ambulanceLng ? (
             <div className="w-full h-96 lg:h-[500px] rounded-lg overflow-hidden border border-gray-200">
               <LiveTrackingMap
@@ -114,7 +117,24 @@ const EmergencyRouteMap = ({
                 isHospital={false}
               />
             </div>
+          ) : isTracking ? (
+            /* Loading State - Tracking active but no GPS data yet */
+            <div className="w-full h-96 lg:h-[500px] rounded-lg overflow-hidden border-2 border-blue-400 bg-blue-50 flex items-center justify-center">
+              <div className="text-center p-8">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                  <Activity className="w-8 h-8 text-blue-600 animate-spin" />
+                </div>
+                <h4 className="text-lg font-bold text-blue-900 mb-2">Connecting to Ambulance...</h4>
+                <p className="text-sm text-blue-700 mb-4">Waiting for live GPS signal</p>
+                <div className="bg-white p-4 rounded-lg border border-blue-200 max-w-md mx-auto">
+                  <p className="text-xs text-blue-800">
+                    The ambulance driver needs to open the ambulance app and enable location permissions for live tracking.
+                  </p>
+                </div>
+              </div>
+            </div>
           ) : (
+            /* Static Map - No tracking active */
             <div className="w-full h-96 lg:h-[500px] rounded-lg overflow-hidden border border-gray-200">
               <PoliceMap
                 userLat={Number(emergencyLat)}
@@ -283,6 +303,52 @@ export default function PoliceDashboard() {
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /* ---------------- POLL LIVE AMBULANCE LOCATION ---------------- */
+  useEffect(() => {
+    if (!trackedAmbulanceId) {
+      setAmbulanceLocation(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchAmbulanceLocation = async () => {
+      try {
+        console.log(`🚓 [Police] Fetching location for ambulance ID: ${trackedAmbulanceId}`);
+        const res = await fetch(
+          `/api/ambulance-location?ambulance_id=${trackedAmbulanceId}`
+        );
+
+        if (!res.ok) {
+          console.error(`❌ [Police] Location fetch failed with status: ${res.status}`);
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        const data = await res.json();
+        console.log(`✅ [Police] Location data received:`, data);
+
+        if (isMounted && data.success && data.data) {
+          console.log(`📍 [Police] Setting ambulance location:`, data.data);
+          setAmbulanceLocation(data.data);
+        } else if (!data.success) {
+          console.warn(`⚠️ [Police] API returned success=false:`, data);
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error('❌ [Police] Error fetching ambulance location:', err);
+        }
+      }
+    };
+
+    fetchAmbulanceLocation();
+    const interval = setInterval(fetchAmbulanceLocation, 3000); // Poll every 3 seconds
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [trackedAmbulanceId]);
 
   /* ---------------- UPDATE STATUS ---------------- */
   const updateStatus = async (id: string, newStatus: PoliceRequest['status']) => {
@@ -768,8 +834,9 @@ export default function PoliceDashboard() {
               hospitalLat={assignedHospital?.latitude}
               hospitalLng={assignedHospital?.longitude}
               hospitalName={assignedHospital?.name}
-              ambulanceLat={ambulanceLocation?.latitude}
-              ambulanceLng={ambulanceLocation?.longitude}
+              ambulanceLat={ambulanceLocation?.latitude ?? null}
+              ambulanceLng={ambulanceLocation?.longitude ?? null}
+              isTracking={!!trackedAmbulanceId}
             />
           </section>
         )}
