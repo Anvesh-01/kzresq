@@ -20,13 +20,13 @@ export default function LandingPage() {
 
           <div className="flex gap-3">
             <button
-              onClick={() => router.push("/login")}
+              onClick={() => router.push("/user/sign-in")}
               className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
             >
               Login
             </button>
             <button
-              onClick={() => router.push("/signup")}
+              onClick={() => router.push("/user/sign-up")}
               className="px-5 py-2.5 gradient-bg-trust text-white rounded-lg font-medium hover:shadow-lg transform hover:scale-105 transition-all duration-200"
             >
               Sign Up
@@ -65,7 +65,7 @@ export default function LandingPage() {
             </div>
 
             <button
-              onClick={() => router.push("/sos")}
+              onClick={() => router.push("/user/sos")}
               className="w-full h-32 gradient-bg-emergency text-white text-3xl font-bold rounded-2xl shadow-lg hover:shadow-xl active:scale-95 transition-all duration-200 animate-emergency-pulse mb-4 flex items-center justify-center gap-3"
             >
               <Zap className="w-10 h-10" />
