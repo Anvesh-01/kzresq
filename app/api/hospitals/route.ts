@@ -1,86 +1,86 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-const FALLBACK_HOSPITALS = [
-  {
-    name: "KMC Hospital Mangaluru",
-    lat: 12.872168853376317,
-    lng: 74.84882556685055,
-  },
-];
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Helper function to calculate distance (Haversine formula)
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Radius of the Earth in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) *
+    Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in km
+}
 
 export async function POST(req: NextRequest) {
   try {
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Missing Supabase credentials");
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+    }
+
     const { latitude, longitude } = await req.json();
 
     if (!latitude || !longitude) {
+      return NextResponse.json({ error: "Latitude and longitude are required" }, { status: 400 });
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    // Calculate bounding box for initial filtering (approx. 50km radius)
+    // 1 deg lat ~= 111km
+    // 1 deg lon ~= 111km * cos(lat)
+    const radiusKm = 50;
+    const latDelta = radiusKm / 111;
+    const lonDelta = radiusKm / (111 * Math.cos(latitude * (Math.PI / 180)));
+
+    const minLat = latitude - latDelta;
+    const maxLat = latitude + latDelta;
+    const minLon = longitude - lonDelta;
+    const maxLon = longitude + lonDelta;
+
+    // Fetch active hospitals from Supabase within the bounding box
+    const { data: hospitals, error } = await supabaseAdmin
+      .from("hospitals")
+      .select("id, name, latitude, longitude, phone, address")
+      .eq("is_active", true)
+      .gte("latitude", minLat)
+      .lte("latitude", maxLat)
+      .gte("longitude", minLon)
+      .lte("longitude", maxLon);
+
+    if (error) {
+      console.error("Database error fetching hospitals:", error);
+      return NextResponse.json({ error: `Failed to fetch hospitals: ${error.message}` }, { status: 500 });
+    }
+
+    if (!hospitals || hospitals.length === 0) {
       return NextResponse.json([]);
     }
 
-    // 🔥 Expanded Overpass Query
-    const query = `
-      [out:json][timeout:25];
-      (
-        node["amenity"="hospital"](around:12000,${latitude},${longitude});
-        way["amenity"="hospital"](around:12000,${latitude},${longitude});
-        relation["amenity"="hospital"](around:12000,${latitude},${longitude});
-
-        node["healthcare"="hospital"](around:12000,${latitude},${longitude});
-        way["healthcare"="hospital"](around:12000,${latitude},${longitude});
-        relation["healthcare"="hospital"](around:12000,${latitude},${longitude});
-
-        node["amenity"="clinic"](around:12000,${latitude},${longitude});
-        way["amenity"="clinic"](around:12000,${latitude},${longitude});
-      );
-      out center tags;
-    `;
-
-    const response = await fetch(
-      "https://overpass-api.de/api/interpreter",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: `data=${encodeURIComponent(query)}`,
-      }
-    );
-
-    // ✅ SAFETY: Read as text first
-    const text = await response.text();
-
-    // If Overpass returns HTML/XML error
-    if (text.startsWith("<")) {
-      console.error("Overpass HTML error:", text);
-      return NextResponse.json(FALLBACK_HOSPITALS);
-    }
-
-    const data = JSON.parse(text);
-
-    let hospitals = data.elements
-      .map((el: any) => ({ // Keeping explicit any for external API data if needed, or better, type it.
-        // Actually, renaming to unknown or similar if possible, but map(el: any) is what is there.
-        // I will replace with map((el: Record<string, any>) => ({
-        name: el.tags?.name || "Nearby Hospital",
-        lat: el.lat ?? el.center?.lat,
-        lng: el.lon ?? el.center?.lon,
+    // Calculate exact distance and sort
+    const hospitalsWithDistance = hospitals
+      .map((hospital) => ({
+        ...hospital,
+        distance: calculateDistance(latitude, longitude, hospital.latitude, hospital.longitude),
       }))
-      .filter((h: { lat: number | undefined; lng: number | undefined }) => h.lat && h.lng);
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 50); // Limit to closest 50
 
-    // 🔥 Inject fallback hospital if KMC missing
-    const kmcExists = hospitals.some((h: { name: string }) =>
-      h.name.toLowerCase().includes("kmc")
-    );
-
-    if (!kmcExists) {
-      hospitals.push(...FALLBACK_HOSPITALS);
-    }
-
-    // Limit to 50
-    hospitals = hospitals.slice(0, 50);
-
-    return NextResponse.json(hospitals);
+    return NextResponse.json(hospitalsWithDistance);
   } catch (error) {
-    console.error("Overpass API error:", error);
-    return NextResponse.json(FALLBACK_HOSPITALS);
+    console.error("Unexpected error in hospitals API:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { Phone, Users, MapPin, Clock, AlertCircle, Loader2, CheckCircle } from "lucide-react";
 
 type Hospital = {
+  id: string; // Added ID
   name: string;
   lat: number;
   lng: number;
+  phone_number?: string;
   distance?: number;
 };
 
@@ -60,11 +62,22 @@ export default function SOSPage() {
 
       let data = await res.json();
 
-      data = data
-        .map((h: { name: string; lat: number; lng: number }) => ({
-          ...h,
-          distance: calculateDistance(lat, lng, h.lat, h.lng),
-        }))
+      if (!res.ok || !Array.isArray(data)) {
+        console.error("Failed to fetch hospitals:", data);
+        setHospitals([]);
+        return;
+      }
+
+      // Map API response (latitude/longitude) to component state (lat/lng)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data = data.map((h: any) => ({
+        id: h.id,
+        name: h.name,
+        lat: h.latitude,
+        lng: h.longitude,
+        phone_number: h.phone,
+        distance: calculateDistance(lat, lng, h.latitude, h.longitude),
+      }))
         .sort((a: { distance: number }, b: { distance: number }) => a.distance - b.distance);
 
       setHospitals(data);
@@ -191,7 +204,9 @@ export default function SOSPage() {
 
   /* ---------------- AUTO CONTINUE (SAFE) ---------------- */
   useEffect(() => {
-    if (location && selectedHospital && emergencyId && !hasNavigatedRef.current) {
+    // Navigate if emergency is created and we have location
+    // We don'tStrictly require selectedHospital anymore, as it might be a broadcast
+    if (location && emergencyId && !hasNavigatedRef.current) {
       hasNavigatedRef.current = true;
 
       // Clear any pending timers
@@ -199,16 +214,22 @@ export default function SOSPage() {
         clearTimeout(autoTimerRef.current);
       }
 
-      router.push(
-        `/emergency-status?` +
-        `hospital=${encodeURIComponent(selectedHospital.name)}` +
-        `&hLat=${selectedHospital.lat}` +
-        `&hLng=${selectedHospital.lng}` +
-        `&uLat=${location.lat}` +
-        `&uLng=${location.lng}` +
-        `&emergencyId=${emergencyId}` +
-        `&mode=CRITICAL`
-      );
+      const params = new URLSearchParams();
+      params.append("emergencyId", emergencyId);
+      params.append("mode", "CRITICAL");
+      params.append("uLat", location.lat.toString());
+      params.append("uLng", location.lng.toString());
+
+      if (selectedHospital) {
+        params.append("hospital", selectedHospital.name);
+        params.append("hLat", selectedHospital.lat.toString());
+        params.append("hLng", selectedHospital.lng.toString());
+      } else {
+        params.append("hospital", "Nearby Hospitals");
+        // We don't have hospital coordinates yet
+      }
+
+      router.push(`/user/emergency-status?${params.toString()}`);
     }
   }, [location, selectedHospital, emergencyId, router]);
 
@@ -224,24 +245,33 @@ export default function SOSPage() {
       return;
     }
 
-    if (!selectedHospital) {
-      alert("Please select a hospital");
-      return;
-    }
+    // REMOVED: Strict check for selectedHospital. 
+    // If none selected, we broadcast to nearest.
 
     // Create emergency with selected hospital if not already created
     let currentEmergencyId = emergencyId;
     if (!currentEmergencyId && !isCreatingEmergency) {
-      // Find the selected hospital's ID from the hospitals list (from OpenStreetMap)
-      // We need to match it to a hospital in our database
-      // For now, pass the hospital name and the backend will try to match
-      currentEmergencyId = await createEmergency(
-        phone.trim(),
-        location.lat,
-        location.lng,
-        name.trim() || undefined,
-        null // Will be assigned by backend based on name matching
-      );
+      // If a hospital is selected, use it. Otherwise, notify 20 nearest.
+      if (selectedHospital) {
+        currentEmergencyId = await createEmergency(
+          phone.trim(),
+          location.lat,
+          location.lng,
+          name.trim() || undefined,
+          selectedHospital.id
+        );
+      } else {
+        // Broadcast mode
+        currentEmergencyId = await createEmergency(
+          phone.trim(),
+          location.lat,
+          location.lng,
+          name.trim() || undefined,
+          null,
+          20 // Notify 20 nearest
+        );
+      }
+
       if (!currentEmergencyId) {
         return; // Error already shown by createEmergency
       }
@@ -251,18 +281,10 @@ export default function SOSPage() {
       clearTimeout(autoTimerRef.current);
     }
 
-    hasNavigatedRef.current = true;
-
-    router.push(
-      `/user/emergency-status?` +
-      `hospital=${encodeURIComponent(selectedHospital.name)}` +
-      `&hLat=${selectedHospital.lat}` +
-      `&hLng=${selectedHospital.lng}` +
-      `&uLat=${location.lat}` +
-      `&uLng=${location.lng}` +
-      `&emergencyId=${currentEmergencyId}` +
-      `&mode=CRITICAL`
-    );
+    // Navigation is handled by the useEffect above when emergencyId is set
+    // But to be responsive, we can also force it here if the effect hasn't fired yet? 
+    // Actually, setting state and letting effect handle it is safer to avoid double nav.
+    // However, since createEmergency is async and sets state, the effect will trigger.
   };
 
   /* ---------------- CLEANUP ---------------- */
@@ -424,7 +446,7 @@ export default function SOSPage() {
           <button
             onClick={handleContinue}
             disabled={
-              !phone.trim() || !location || !selectedHospital || isCreatingEmergency
+              !phone.trim() || !location || isCreatingEmergency
             }
             className="w-full gradient-bg-emergency text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none transition-all duration-200 flex items-center justify-center gap-2"
           >
