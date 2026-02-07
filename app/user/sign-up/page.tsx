@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Image from "next/image";
 import { User, Phone, Mail, Lock, Droplet, AlertTriangle, FileText, Loader2, CheckCircle2, Activity } from "lucide-react";
 
 export default function SignupPage() {
@@ -81,11 +82,17 @@ export default function SignupPage() {
       <div className="w-full max-w-2xl">
         {/* BRANDING */}
         <div className="text-center mb-8 animate-fade-in">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-600 to-emerald-600 rounded-2xl mb-4 shadow-lg">
-            <Activity className="w-9 h-9 text-white" />
+          <div className="inline-flex items-center justify-center mb-4">
+            <Image
+              src="/KenLogo1.png"
+              alt="KEN Logo"
+              width={80}
+              height={80}
+              className="rounded-2xl"
+            />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Your Account</h1>
-          <p className="text-gray-600">Join ResQNet for instant emergency assistance</p>
+          <p className="text-gray-600 font-medium">Join Kozhikode Emergency Network (KEN)</p>
         </div>
 
         {/* SIGNUP CARD */}
@@ -101,8 +108,8 @@ export default function SignupPage() {
           {/* PERSONAL DETAILS */}
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <span className="text-blue-700 font-bold text-sm">1</span>
+              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                <span className="text-green-700 font-bold text-sm">1</span>
               </div>
               <h3 className="text-lg font-bold text-gray-900">Personal Details</h3>
             </div>
@@ -293,7 +300,7 @@ export default function SignupPage() {
           <p className="text-center text-sm text-gray-600 mt-6">
             Already have an account?{" "}
             <span
-              onClick={() => !isLoading && router.push("/login")}
+              onClick={() => !isLoading && router.push("/user/sign-in")}
               className="text-green-600 font-semibold cursor-pointer hover:text-green-700 hover:underline transition-colors duration-200"
             >
               Login
@@ -303,7 +310,7 @@ export default function SignupPage() {
 
         {/* BACK TO HOME */}
         <button
-          onClick={() => router.push("/")}
+          onClick={() => router.push("/user")}
           className="mt-6 w-full text-center text-gray-600 hover:text-gray-900 text-sm font-medium transition-colors duration-200"
         >
           ← Back to Home
