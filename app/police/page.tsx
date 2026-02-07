@@ -4,10 +4,16 @@ import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { Shield, MapPin, Clock, AlertCircle, Phone, CheckCircle, Eye, Radio, Siren, Hospital, Navigation } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
+import "leaflet/dist/leaflet.css";
 
 const PoliceMap = dynamic(() => import("./map/PoliceMap"), {
   ssr: false,
   loading: () => <div className="h-96 lg:h-[500px] w-full bg-gray-100 animate-pulse rounded-xl flex items-center justify-center text-gray-400 font-medium">Loading Interactive Map...</div>,
+});
+
+const LiveTrackingMap = dynamic(() => import('@/components/LiveTrackingMap'), {
+  ssr: false,
+  loading: () => <div className="h-96 lg:h-[500px] w-full bg-gray-100 animate-pulse rounded-xl flex items-center justify-center text-gray-400 font-medium">Loading Live Map...</div>,
 });
 
 /* ---------------- SUPABASE SETUP ---------------- */
@@ -49,6 +55,21 @@ type Emergency = {
   updated_at: string;
   hospital_id: string | null;
   hospital?: Hospital;
+  // Change: Add ambulance ID support to Emergency type
+  assigned_ambulance_id?: string | null;
+};
+
+type PoliceRequest = {
+  id: string;
+  emergency_id: string;
+  hospital_id: string;
+  status: 'pending' | 'acknowledged' | 'resolved';
+  traffic_notes: string | null;
+  requested_at: string;
+  acknowledged_at: string | null;
+  updated_at: string;
+  emergency: Emergency;
+  hospital: Hospital;
 };
 
 /* ---------------- MAP COMPONENT WITH ROUTE ---------------- */
@@ -58,27 +79,47 @@ const EmergencyRouteMap = ({
   hospitalLat,
   hospitalLng,
   hospitalName,
+  ambulanceLat,
+  ambulanceLng,
 }: {
   emergencyLat: number;
   emergencyLng: number;
   hospitalLat?: number | null;
   hospitalLng?: number | null;
   hospitalName?: string | null;
+  // Change: Add ambulance coordinates to map component props
+  ambulanceLat?: number | null;
+  ambulanceLng?: number | null;
 }) => {
-  if (hospitalLat && hospitalLng) {
+  // Change: Condition to render if we have emergency + (hospital OR ambulance) to make it useful
+  if (true) { // Always render logic, but control components inside
     return (
       <div className="space-y-4">
         <div className="bg-white rounded-xl border-2 border-gray-200 p-4">
           <div className="flex items-center gap-2 mb-3">
             <Navigation className="w-5 h-5 text-blue-600" />
-            <h3 className="font-bold text-gray-900">Emergency Location & Route</h3>
+            <h3 className="font-bold text-gray-900">Emergency & Response Live Route</h3>
           </div>
-          <PoliceMap
-            userLat={Number(emergencyLat)}
-            userLng={Number(emergencyLng)}
-            hospitalLat={Number(hospitalLat)}
-            hospitalLng={Number(hospitalLng)}
-          />
+
+          {ambulanceLat && ambulanceLng ? (
+            <div className="w-full h-96 lg:h-[500px]">
+              <LiveTrackingMap
+                latitude={ambulanceLat}
+                longitude={ambulanceLng}
+                destLat={emergencyLat}
+                destLng={emergencyLng}
+                isHospital={false}
+              />
+            </div>
+          ) : (
+            <PoliceMap
+              userLat={Number(emergencyLat)}
+              userLng={Number(emergencyLng)}
+              hospitalLat={hospitalLat ? Number(hospitalLat) : 0}
+              hospitalLng={hospitalLng ? Number(hospitalLng) : 0}
+            />
+          )}
+
           <div className="mt-3 flex items-center justify-between text-sm">
             <div className="flex items-center gap-2 text-gray-600">
               <MapPin className="w-4 h-4 text-red-600" />
@@ -86,7 +127,12 @@ const EmergencyRouteMap = ({
             </div>
             <div className="flex items-center gap-2 text-gray-600">
               <Hospital className="w-4 h-4 text-blue-600" />
-              <span>{hospitalName || 'Hospital'}: {hospitalLat.toFixed(4)}, {hospitalLng.toFixed(4)}</span>
+              <span>
+                {hospitalName || 'Hospital'}:{' '}
+                {hospitalLat && hospitalLng
+                  ? `${Number(hospitalLat).toFixed(4)}, ${Number(hospitalLng).toFixed(4)}`
+                  : 'Location pending'}
+              </span>
             </div>
           </div>
         </div>
@@ -144,10 +190,14 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 
 export default function PoliceDashboard() {
   const [timeNow, setTimeNow] = useState("");
-  const [emergencies, setEmergencies] = useState<Emergency[]>([]);
-  const [selected, setSelected] = useState<Emergency | null>(null);
+  const [policeRequests, setPoliceRequests] = useState<PoliceRequest[]>([]);
+  const [selected, setSelected] = useState<PoliceRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [assignedHospital, setAssignedHospital] = useState<Hospital | null>(null);
+
+  // Change: Add state for ambulance tracking
+  const [trackedAmbulanceId, setTrackedAmbulanceId] = useState<string | null>(null);
+  const [ambulanceLocation, setAmbulanceLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
   /* ---------------- LIVE CLOCK ---------------- */
   useEffect(() => {
@@ -157,27 +207,26 @@ export default function PoliceDashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  /* ---------------- FETCH EMERGENCIES WITH HOSPITAL DATA ---------------- */
-  const fetchEmergencies = async () => {
+  /* ---------------- FETCH POLICE REQUESTS ---------------- */
+  const fetchPoliceRequests = async () => {
     try {
-      const { data, error } = await supabase
-        .from('sos_emergencies')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const res = await fetch('/api/police-requests');
 
-      if (error) throw error;
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
 
-      const newEmergencies = data || [];
-      setEmergencies(newEmergencies);
+      const result = await res.json();
+      const newRequests = result.data || [];
 
-      // Automatically update selected emergency if data changed
+      setPoliceRequests(newRequests);
+
+      // Automatically update selected request if data changed
       if (selected) {
-        const updated = newEmergencies.find(e => e.id === selected.id);
+        const updated = newRequests.find((r: PoliceRequest) => r.id === selected.id);
         if (updated) {
-          if (updated.hospital_id !== selected.hospital_id ||
-            updated.assigned_hospital_name !== selected.assigned_hospital_name ||
-            updated.status !== selected.status) {
-            console.log('Assignment or status change detected, refreshing view...');
+          if (updated.status !== selected.status) {
+            console.log('Status change detected, refreshing view...');
             viewLocation(updated);
           } else {
             setSelected(updated);
@@ -187,7 +236,7 @@ export default function PoliceDashboard() {
 
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching emergencies:', error);
+      console.error('Error fetching police requests:', error);
       setLoading(false);
     }
   };
@@ -245,49 +294,35 @@ export default function PoliceDashboard() {
     }
   };
 
-  /* ---------------- REAL-TIME SUBSCRIPTION ---------------- */
+  /* ---------------- POLLING FOR POLICE REQUESTS ---------------- */
   useEffect(() => {
-    fetchEmergencies();
+    fetchPoliceRequests();
 
-    // Subscribe to real-time changes
-    const channel = supabase
-      .channel('sos_emergencies_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'sos_emergencies'
-        },
-        (payload) => {
-          console.log('Real-time update:', payload);
-          fetchEmergencies(); // Refresh data on any change
-        }
-      )
-      .subscribe();
+    // Poll every 5 seconds for updates
+    const interval = setInterval(fetchPoliceRequests, 5000);
 
     return () => {
-      supabase.removeChannel(channel);
+      clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ---------------- UPDATE STATUS ---------------- */
-  const updateStatus = async (id: string, newStatus: Emergency['status']) => {
+  const updateStatus = async (id: string, newStatus: PoliceRequest['status']) => {
     try {
-      const { error } = await supabase
-        .from('sos_emergencies')
-        .update({
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id);
+      const res = await fetch('/api/police-requests', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: newStatus }),
+      });
 
-      if (error) throw error;
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
 
       // Optimistic update
-      setEmergencies(prev =>
-        prev.map(e => e.id === id ? { ...e, status: newStatus } : e)
+      setPoliceRequests(prev =>
+        prev.map(r => r.id === id ? { ...r, status: newStatus } : r)
       );
 
       if (selected?.id === id) {
@@ -299,12 +334,19 @@ export default function PoliceDashboard() {
   };
 
   const markAcknowledged = (id: string) => updateStatus(id, 'acknowledged');
-  const markInProgress = (id: string) => updateStatus(id, 'in_progress');
   const markResolved = (id: string) => updateStatus(id, 'resolved');
 
   /* ---------------- VIEW LOCATION ---------------- */
-  const viewLocation = async (emergency: Emergency) => {
-    setSelected(emergency);
+  const viewLocation = async (request: PoliceRequest) => {
+    setSelected(request);
+    const emergency = request.emergency;
+
+    // Change: Set tracked ambulance from emergency data
+    if (emergency.assigned_ambulance_id) {
+      setTrackedAmbulanceId(emergency.assigned_ambulance_id);
+    } else {
+      setTrackedAmbulanceId(null);
+    }
 
     console.log('Selected emergency:', emergency);
     console.log('Hospital name:', emergency.assigned_hospital_name);
@@ -321,26 +363,27 @@ export default function PoliceDashboard() {
         longitude: emergency.assigned_hospital_lng,
         phone: null
       };
-      console.log('Setting hospital data:', hospitalData);
       setAssignedHospital(hospitalData);
-    } else if (emergency.hospital_id) {
+    }
+    // START CHANGE: Use the hospital from the request join if available
+    else if (request.hospital && request.hospital.latitude && request.hospital.longitude) {
+      setAssignedHospital(request.hospital);
+    }
+    // END CHANGE
+    else if (emergency.hospital_id) {
       console.log('Fetching hospital data from hospitals table for ID:', emergency.hospital_id);
       const hospitalData = await fetchHospitalById(emergency.hospital_id);
       if (hospitalData) {
-        console.log('Successfully fetched hospital fallback data by ID:', hospitalData);
         setAssignedHospital(hospitalData);
       } else {
-        console.log('Failed to fetch hospital fallback data by ID');
         setAssignedHospital(null);
       }
     } else if (emergency.assigned_hospital_name) {
       console.log('Fetching hospital data by name:', emergency.assigned_hospital_name);
       const hospitalData = await fetchHospitalByName(emergency.assigned_hospital_name);
       if (hospitalData) {
-        console.log('Successfully fetched hospital fallback data by Name:', hospitalData);
         setAssignedHospital(hospitalData);
       } else {
-        console.log('Failed to fetch hospital fallback data by Name');
         setAssignedHospital(null);
       }
     } else {
@@ -370,14 +413,14 @@ export default function PoliceDashboard() {
     }
   };
 
-  const activeEmergencies = emergencies.filter(e =>
-    ['pending', 'acknowledged', 'dispatched', 'in_progress'].includes(e.status)
+  const activeRequests = policeRequests.filter(r =>
+    ['pending', 'acknowledged'].includes(r.status)
   );
-  const criticalCount = emergencies.filter(e =>
-    e.emergency_level === 'critical' &&
-    ['pending', 'acknowledged', 'dispatched', 'in_progress'].includes(e.status)
+  const criticalCount = policeRequests.filter(r =>
+    r.emergency.emergency_level === 'critical' &&
+    ['pending', 'acknowledged'].includes(r.status)
   ).length;
-  const resolvedCount = emergencies.filter(e => e.status === 'resolved').length;
+  const resolvedCount = policeRequests.filter(r => r.status === 'resolved').length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -460,7 +503,7 @@ export default function PoliceDashboard() {
               <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-red-100 to-red-200 rounded-lg lg:rounded-xl flex items-center justify-center">
                 <Siren className="w-5 h-5 lg:w-6 lg:h-6 text-red-600" />
               </div>
-              <span className="text-2xl lg:text-3xl font-black text-gray-900">{activeEmergencies.length}</span>
+              <span className="text-2xl lg:text-3xl font-black text-gray-900">{activeRequests.length}</span>
             </div>
             <p className="text-xs lg:text-sm font-semibold text-gray-600">Active Emergencies</p>
           </div>
@@ -490,7 +533,7 @@ export default function PoliceDashboard() {
               <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-lg lg:rounded-xl flex items-center justify-center">
                 <Radio className="w-5 h-5 lg:w-6 lg:h-6 text-indigo-600" />
               </div>
-              <span className="text-2xl lg:text-3xl font-black text-gray-900">{emergencies.length}</span>
+              <span className="text-2xl lg:text-3xl font-black text-gray-900">{policeRequests.length}</span>
             </div>
             <p className="text-xs lg:text-sm font-semibold text-gray-600">Total Cases</p>
           </div>
@@ -508,139 +551,130 @@ export default function PoliceDashboard() {
               </h2>
             </div>
             <span className="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 sm:px-4 lg:px-5 py-1.5 lg:py-2 rounded-full text-sm font-bold shadow-lg">
-              {activeEmergencies.length} Active
+              {activeRequests.length} Active
             </span>
           </div>
 
           <div className="divide-y divide-gray-100">
             {loading ? (
-              <div className="p-8 text-center text-gray-500">Loading emergencies...</div>
-            ) : emergencies.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">No emergencies at this time</div>
+              <div className="p-8 text-center text-gray-500">Loading police requests...</div>
+            ) : policeRequests.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">No police assistance requests at this time</div>
             ) : (
-              emergencies.map((e, index) => (
-                <div
-                  key={e.id}
-                  onClick={() => viewLocation(e)}
-                  className={`p-4 sm:p-6 lg:p-8 cursor-pointer hover:bg-gradient-to-r hover:from-gray-50 hover:to-transparent transition-all duration-200 ${selected?.id === e.id ? "bg-gradient-to-r from-indigo-50 to-transparent border-l-4 border-indigo-500" : ""
-                    }`}
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 mb-4">
-                    <div className="flex items-start gap-3 lg:gap-4 flex-1">
-                      <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl lg:rounded-2xl flex items-center justify-center border border-gray-200 shadow-sm flex-shrink-0">
-                        <AlertCircle className={`w-6 h-6 lg:w-7 lg:h-7 ${e.emergency_level === 'critical' ? 'text-red-600' :
-                          e.emergency_level === 'high' ? 'text-orange-600' :
-                            e.emergency_level === 'medium' ? 'text-yellow-600' : 'text-blue-600'
-                          }`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-black text-base sm:text-lg lg:text-xl text-gray-900 mb-2">
-                          {e.emergency_type || 'Emergency Alert'}
-                        </p>
-                        <div className="space-y-1.5">
-                          {e.name && (
+              policeRequests.map((request, index) => {
+                const e = request.emergency;
+                return (
+                  <div
+                    key={request.id}
+                    onClick={() => viewLocation(request)}
+                    className={`p-4 sm:p-6 lg:p-8 cursor-pointer hover:bg-gradient-to-r hover:from-gray-50 hover:to-transparent transition-all duration-200 ${selected?.id === request.id ? "bg-gradient-to-r from-indigo-50 to-transparent border-l-4 border-indigo-500" : ""
+                      }`}
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 mb-4">
+                      <div className="flex items-start gap-3 lg:gap-4 flex-1">
+                        <div className="w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl lg:rounded-2xl flex items-center justify-center border border-gray-200 shadow-sm flex-shrink-0">
+                          <AlertCircle className={`w-6 h-6 lg:w-7 lg:h-7 ${e.emergency_level === 'critical' ? 'text-red-600' :
+                            e.emergency_level === 'high' ? 'text-orange-600' :
+                              e.emergency_level === 'medium' ? 'text-yellow-600' : 'text-blue-600'
+                            }`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black text-base sm:text-lg lg:text-xl text-gray-900 mb-2">
+                            {e.emergency_type || 'Emergency Alert'}
+                          </p>
+                          <div className="space-y-1.5">
+                            {e.name && (
+                              <div className="flex items-center gap-2 text-gray-700">
+                                <Eye className="w-4 h-4 flex-shrink-0 text-gray-500" />
+                                <p className="text-xs sm:text-sm font-semibold truncate">{e.name}</p>
+                              </div>
+                            )}
+                            {e.phone_number && (
+                              <div className="flex items-center gap-2 text-gray-700">
+                                <Phone className="w-4 h-4 flex-shrink-0 text-gray-500" />
+                                <p className="text-xs sm:text-sm font-semibold truncate">{e.phone_number}</p>
+                              </div>
+                            )}
                             <div className="flex items-center gap-2 text-gray-700">
-                              <Eye className="w-4 h-4 flex-shrink-0 text-gray-500" />
-                              <p className="text-xs sm:text-sm font-semibold truncate">{e.name}</p>
+                              <MapPin className="w-4 h-4 flex-shrink-0 text-gray-500" />
+                              <p className="text-xs sm:text-sm font-semibold truncate">
+                                {e.location_text || `${e.latitude.toFixed(4)}, ${e.longitude.toFixed(4)}`}
+                              </p>
                             </div>
-                          )}
-                          {e.phone_number && (
-                            <div className="flex items-center gap-2 text-gray-700">
-                              <Phone className="w-4 h-4 flex-shrink-0 text-gray-500" />
-                              <p className="text-xs sm:text-sm font-semibold truncate">{e.phone_number}</p>
+                            {e.assigned_hospital_name && (
+                              <div className="flex items-center gap-2 text-blue-700">
+                                <Hospital className="w-4 h-4 flex-shrink-0 text-blue-500" />
+                                <p className="text-xs sm:text-sm font-semibold truncate">{e.assigned_hospital_name}</p>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 text-gray-500">
+                              <Clock className="w-3 h-3 flex-shrink-0" />
+                              <p className="text-xs font-medium">{getTimeAgo(e.created_at)}</p>
                             </div>
-                          )}
-                          <div className="flex items-center gap-2 text-gray-700">
-                            <MapPin className="w-4 h-4 flex-shrink-0 text-gray-500" />
-                            <p className="text-xs sm:text-sm font-semibold truncate">
-                              {e.location_text || `${e.latitude.toFixed(4)}, ${e.longitude.toFixed(4)}`}
-                            </p>
-                          </div>
-                          {e.assigned_hospital_name && (
-                            <div className="flex items-center gap-2 text-blue-700">
-                              <Hospital className="w-4 h-4 flex-shrink-0 text-blue-500" />
-                              <p className="text-xs sm:text-sm font-semibold truncate">{e.assigned_hospital_name}</p>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2 text-gray-500">
-                            <Clock className="w-3 h-3 flex-shrink-0" />
-                            <p className="text-xs font-medium">{getTimeAgo(e.created_at)}</p>
                           </div>
                         </div>
                       </div>
+
+                      <div className="flex flex-col gap-2">
+                        <span className={`px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 lg:py-2.5 rounded-lg lg:rounded-xl text-xs sm:text-sm font-black whitespace-nowrap flex-shrink-0 uppercase ${getPriorityStyles(e.emergency_level)}`}>
+                          {e.emergency_level}
+                        </span>
+                        <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-semibold text-center">
+                          {e.status}
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex flex-col gap-2">
-                      <span className={`px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 lg:py-2.5 rounded-lg lg:rounded-xl text-xs sm:text-sm font-black whitespace-nowrap flex-shrink-0 uppercase ${getPriorityStyles(e.emergency_level)}`}>
-                        {e.emergency_level}
-                      </span>
-                      <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-semibold text-center">
-                        {e.status}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* ACTIONS */}
-                  {['pending', 'acknowledged', 'in_progress'].includes(e.status) && (
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                      <button
-                        onClick={(ev) => {
-                          ev.stopPropagation();
-                          viewLocation(e);
-                        }}
-                        className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg lg:rounded-xl text-sm font-bold shadow-lg shadow-blue-200 hover:shadow-xl transform hover:scale-105 transition-all"
-                      >
-                        <MapPin className="w-4 h-4" />
-                        <span>View Route</span>
-                      </button>
-                      {e.status === 'pending' && (
+                    {/* ACTIONS */}
+                    {['pending', 'acknowledged'].includes(request.status) && (
+                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                         <button
                           onClick={(ev) => {
                             ev.stopPropagation();
-                            markAcknowledged(e.id);
+                            viewLocation(request);
                           }}
-                          className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg lg:rounded-xl text-sm font-bold shadow-lg shadow-green-200 hover:shadow-xl transform hover:scale-105 transition-all"
+                          className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg lg:rounded-xl text-sm font-bold shadow-lg shadow-blue-200 hover:shadow-xl transform hover:scale-105 transition-all"
+                        >
+                          <MapPin className="w-4 h-4" />
+                          <span>View Route</span>
+                        </button>
+                        {request.status === 'pending' && (
+                          <button
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              markAcknowledged(request.id);
+                            }}
+                            className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg lg:rounded-xl text-sm font-bold shadow-lg shadow-green-200 hover:shadow-xl transform hover:scale-105 transition-all"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            <span>Acknowledge</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            markResolved(request.id);
+                          }}
+                          className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700 text-white rounded-lg lg:rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
                         >
                           <CheckCircle className="w-4 h-4" />
-                          <span>Acknowledge</span>
+                          <span>Mark Resolved</span>
                         </button>
-                      )}
-                      {e.status === 'acknowledged' && (
-                        <button
-                          onClick={(ev) => {
-                            ev.stopPropagation();
-                            markInProgress(e.id);
-                          }}
-                          className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-lg lg:rounded-xl text-sm font-bold shadow-lg shadow-orange-200 hover:shadow-xl transform hover:scale-105 transition-all"
-                        >
-                          <Radio className="w-4 h-4" />
-                          <span>En Route</span>
-                        </button>
-                      )}
-                      <button
-                        onClick={(ev) => {
-                          ev.stopPropagation();
-                          markResolved(e.id);
-                        }}
-                        className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700 text-white rounded-lg lg:rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        <span>Mark Resolved</span>
-                      </button>
-                    </div>
-                  )}
+                      </div>
+                    )}
 
-                  {e.status === 'resolved' && (
-                    <div className="flex items-center gap-2 lg:gap-3 px-4 sm:px-5 lg:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-green-100 to-emerald-100 rounded-lg lg:rounded-xl border-2 border-green-300 shadow-md">
-                      <CheckCircle className="w-5 h-5 lg:w-6 lg:h-6 text-green-700 flex-shrink-0" />
-                      <p className="font-black text-xs sm:text-sm text-green-800">
-                        Emergency Resolved
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ))
+                    {request.status === 'resolved' && (
+                      <div className="flex items-center gap-2 lg:gap-3 px-4 sm:px-5 lg:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-green-100 to-emerald-100 rounded-lg lg:rounded-xl border-2 border-green-300 shadow-md">
+                        <CheckCircle className="w-5 h-5 lg:w-6 lg:h-6 text-green-700 flex-shrink-0" />
+                        <p className="font-black text-xs sm:text-sm text-green-800">
+                          Emergency Resolved
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </section>
@@ -663,26 +697,26 @@ export default function PoliceDashboard() {
                 <div className="space-y-3">
                   <div>
                     <p className="text-xs font-semibold text-gray-600 mb-1">INCIDENT LOCATION</p>
-                    <p className="font-bold text-gray-900 text-lg">{selected.emergency_type || 'Emergency'}</p>
+                    <p className="font-bold text-gray-900 text-lg">{selected.emergency.emergency_type || 'Emergency'}</p>
                     <p className="text-sm text-gray-700 flex items-center gap-1 mt-1">
                       <MapPin className="w-3 h-3" />
-                      {selected.location_text || `${selected.latitude.toFixed(6)}, ${selected.longitude.toFixed(6)}`}
+                      {selected.emergency.location_text || `${selected.emergency.latitude.toFixed(6)}, ${selected.emergency.longitude.toFixed(6)}`}
                     </p>
                   </div>
 
                   {/* Patient Contact */}
-                  {selected.phone_number && (
+                  {selected.emergency.phone_number && (
                     <div className="pt-2 border-t border-blue-200">
                       <p className="text-xs font-semibold text-gray-600 mb-1">PATIENT CONTACT</p>
                       <a
-                        href={`tel:${selected.phone_number}`}
+                        href={`tel:${selected.emergency.phone_number}`}
                         className="text-blue-700 font-bold text-lg hover:text-blue-900 flex items-center gap-2"
                       >
                         <Phone className="w-4 h-4" />
-                        {selected.phone_number}
+                        {selected.emergency.phone_number}
                       </a>
-                      {selected.name && (
-                        <p className="text-sm text-gray-700 mt-1">{selected.name}</p>
+                      {selected.emergency.name && (
+                        <p className="text-sm text-gray-700 mt-1">{selected.emergency.name}</p>
                       )}
                     </div>
                   )}
@@ -701,8 +735,8 @@ export default function PoliceDashboard() {
                           <span>Distance: </span>
                           <span className="font-bold text-blue-700">
                             {calculateDistance(
-                              selected.latitude,
-                              selected.longitude,
+                              selected.emergency.latitude,
+                              selected.emergency.longitude,
                               assignedHospital.latitude,
                               assignedHospital.longitude
                             )}
@@ -712,10 +746,10 @@ export default function PoliceDashboard() {
                     </div>
                   )}
 
-                  {selected.description && (
+                  {selected.emergency.description && (
                     <div className="pt-2 border-t border-blue-200">
                       <p className="text-xs font-semibold text-gray-600">Description:</p>
-                      <p className="text-sm text-gray-700 mt-1">{selected.description}</p>
+                      <p className="text-sm text-gray-700 mt-1">{selected.emergency.description}</p>
                     </div>
                   )}
                 </div>
@@ -733,11 +767,13 @@ export default function PoliceDashboard() {
             <div className="rounded-xl lg:rounded-2xl overflow-hidden border-2 border-gray-200 shadow-lg">
 
               <EmergencyRouteMap
-                emergencyLat={selected.latitude}
-                emergencyLng={selected.longitude}
+                emergencyLat={selected.emergency.latitude}
+                emergencyLng={selected.emergency.longitude}
                 hospitalLat={assignedHospital?.latitude}
                 hospitalLng={assignedHospital?.longitude}
                 hospitalName={assignedHospital?.name}
+                ambulanceLat={ambulanceLocation?.latitude}
+                ambulanceLng={ambulanceLocation?.longitude}
               />
             </div>
           </section>

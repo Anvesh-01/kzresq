@@ -16,25 +16,25 @@ const DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 // Custom Icons
-const ambulanceIcon = L.icon({
-    iconUrl: "https://cdn-icons-png.flaticon.com/512/2893/2893043.png", // Ambulance icon
+const ambulanceIcon = L.divIcon({
+    html: '<div style="font-size: 30px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">🚑</div>',
+    className: 'custom-ambulance-icon',
     iconSize: [40, 40],
     iconAnchor: [20, 20],
-    popupAnchor: [0, -20],
 });
 
-const patientIcon = L.icon({
-    iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png", // Red Map Marker
-    iconSize: [35, 35],
-    iconAnchor: [17, 35],
-    popupAnchor: [0, -35],
+const patientIcon = L.divIcon({
+    html: '<div style="font-size: 30px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">📍</div>',
+    className: 'custom-patient-icon',
+    iconSize: [40, 40],
+    iconAnchor: [20, 40],
 });
 
 // Component to update map center when props change
 function MapUpdater({ center }: { center: [number, number] }) {
     const map = useMap();
     useEffect(() => {
-        map.flyTo(center, 13);
+        map.flyTo(center, map.getZoom());
     }, [center, map]);
     return null;
 }
@@ -71,6 +71,7 @@ export default function AmbulanceMap({ patientLocation, ambulances, onAssign }: 
             center={center}
             zoom={13}
             style={{ height: "100%", width: "100%" }}
+            scrollWheelZoom={true}
         >
             <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
