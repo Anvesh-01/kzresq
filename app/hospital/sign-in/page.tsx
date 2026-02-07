@@ -171,7 +171,7 @@ export default function LoginPage() {
 
         {/* FOOTER */}
         <p className="text-center text-xs text-gray-500 mt-6">
-          © {new Date().getFullYear()} ResQNet. All rights reserved. Saving lives, one second at a time.
+          @2026 Kozikod emergency network (KEN) Every second saves a life
         </p>
       </div>
     </div>

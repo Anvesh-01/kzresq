@@ -364,10 +364,10 @@ export default function EmergencyDetailsPage() {
                 onClick={handleRequestAppointment}
                 disabled={isSubmitting || submitSuccess}
                 className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 ${submitSuccess
-                    ? "bg-green-600 text-white"
-                    : isSubmitting
-                      ? "bg-gray-400 text-white cursor-not-allowed"
-                      : "gradient-bg-trust text-white"
+                  ? "bg-green-600 text-white"
+                  : isSubmitting
+                    ? "bg-gray-400 text-white cursor-not-allowed"
+                    : "gradient-bg-trust text-white"
                   }`}
               >
                 {isSubmitting ? (
@@ -406,7 +406,7 @@ export default function EmergencyDetailsPage() {
 
           {/* FOOTER */}
           <p className="text-center text-xs text-gray-500 mt-6">
-            © {new Date().getFullYear()} ResQNet. All rights reserved. Saving lives, one second at a time.
+            @2026 Kozikod emergency network (KEN) Every second saves a life
           </p>
         </div>
       </div>

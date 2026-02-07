@@ -30,7 +30,7 @@ const translations = {
     stat3Label: "Partner Hospitals",
     stat4Value: "98%",
     stat4Label: "Success Rate",
-    footerQuote: "Speeding care when it matters most.",
+    footerQuote: "Every second saves a life",
     translateBtn: "മലയാളം",
   },
   ml: {
@@ -170,7 +170,7 @@ export default function LandingPage() {
                       className="object-contain"
                     />
                   </div>
-                  <span className="text-xl font-bold text-gray-900 tracking-tight">ResQNet</span>
+                  <span className="text-xl font-bold text-gray-900 tracking-tight">Kozikod emergency network (KEN)</span>
                 </div>
 
                 <div className="flex flex-col gap-4">
@@ -274,7 +274,7 @@ export default function LandingPage() {
               <span className="text-gray-900 font-bold text-lg">KEN</span>
             </div>
             <p className="text-sm text-gray-600 text-center md:text-left">
-              © {new Date().getFullYear()} ResQNet. {t.footerQuote}
+              @2026 Kozikod emergency network (KEN) {t.footerQuote}
             </p>
           </div>
         </div>

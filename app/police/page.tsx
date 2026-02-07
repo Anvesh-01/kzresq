@@ -744,6 +744,9 @@ export default function PoliceDashboard() {
         )}
 
       </main>
+      <p className="text-center text-xs text-gray-500 mt-6 pb-6">
+        @2026 Kozikod emergency network (KEN) Every second saves a life
+      </p>
     </div>
   );
 }

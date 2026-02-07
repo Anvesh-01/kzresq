@@ -19,7 +19,6 @@ import {
   Search,
   Filter
 } from "lucide-react";
-import EmergencyMap from "@/components/EmergencyMap";
 import AmbulanceAssignmentMap from '@/components/AmbulanceAssignmentMap';
 import { getHospitalSession, clearHospitalSession } from '@/lib/auth-client';
 import type { HospitalSession } from '@/lib/auth';
@@ -1281,7 +1280,7 @@ export default function HospitalDashboard() {
 
         {/* FOOTER */}
         <p className="text-center text-xs text-gray-500 mt-6 pb-6">
-          © {new Date().getFullYear()} ResQNet. All rights reserved. Saving lives, one second at a time.
+          @2026 Kozikod emergency network (KEN) Every second saves a life
         </p>
       </main>
     </div>
