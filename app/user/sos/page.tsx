@@ -254,7 +254,7 @@ export default function SOSPage() {
     hasNavigatedRef.current = true;
 
     router.push(
-      `/emergency-status?` +
+      `/user/emergency-status?` +
       `hospital=${encodeURIComponent(selectedHospital.name)}` +
       `&hLat=${selectedHospital.lat}` +
       `&hLng=${selectedHospital.lng}` +

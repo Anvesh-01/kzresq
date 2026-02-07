@@ -1,415 +1,164 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { User, Phone, Droplet, FileText, MapPin, Hospital, Clock, Navigation, AlertCircle, Activity, CheckCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Activity, Clock, Shield, Zap } from "lucide-react";
 
-type Hospital = {
-  name: string;
-  lat: number;
-  lng: number;
-  distance: number;
-  doctor: string;
-};
-
-export default function EmergencyDetailsPage() {
-  /* ---------------- MOCK USER ---------------- */
-  const user = {
-    name: "John Doe",
-    phone: "9845612206",
-    bloodGroup: "O+",
-    conditions: "Asthma",
-  };
-
-  /* ---------------- STATE ---------------- */
-  const [issueType, setIssueType] = useState("");
-  const [description, setDescription] = useState("");
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(
-    null
-  );
-  const [hospitals, setHospitals] = useState<Hospital[]>([]);
-  const [selectedHospital, setSelectedHospital] =
-    useState<Hospital | null>(null);
-  const [appointmentTime, setAppointmentTime] = useState<string | null>(null);
-
-  /* ---------------- DISTANCE ---------------- */
-  const calculateDistance = (
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ) => {
-    const R = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-
-    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-  };
-
-  /* ---------------- FETCH HOSPITALS ---------------- */
-  const fetchHospitals = useCallback(async (lat: number, lng: number) => {
-    try {
-      const res = await fetch("/api/hospitals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude: lat, longitude: lng }),
-      });
-
-      const data = await res.json();
-
-      const enriched: Hospital[] = data.slice(0, 30).map((h: { name: string; lat: number; lng: number }) => ({
-        name: h.name,
-        lat: h.lat,
-        lng: h.lng,
-        distance: calculateDistance(lat, lng, h.lat, h.lng),
-        doctor: ["General Physician", "Cardiologist", "Orthopaedic"][
-          Math.floor(Math.random() * 3)
-        ],
-      }));
-
-      enriched.sort((a, b) => a.distance - b.distance);
-      setHospitals(enriched);
-    } catch (error) {
-      console.error("Error fetching hospitals:", error);
-    }
-  }, []);
-
-  /* ---------------- LOCATION ---------------- */
-  useEffect(() => {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const loc = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        };
-        setLocation(loc);
-        fetchHospitals(loc.lat, loc.lng);
-      },
-      () => alert("Location permission required"),
-      { enableHighAccuracy: true }
-    );
-  }, [fetchHospitals]);
-
-  /* ---------------- SELECT HOSPITAL ---------------- */
-  const handleHospitalSelect = (hospital: Hospital) => {
-    setSelectedHospital(hospital);
-    setAppointmentTime("Within 30–45 minutes");
-  };
-
-  /* ---------------- SUBMIT ---------------- */
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-
-  const handleRequestAppointment = async () => {
-    if (!issueType) {
-      setSubmitError("Please select a medical issue");
-      return;
-    }
-    if (!selectedHospital) {
-      setSubmitError("Please select a hospital");
-      return;
-    }
-    if (!location) {
-      setSubmitError("Location not available");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setSubmitError("");
-
-    try {
-      const response = await fetch("/api/appointments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_phone: user.phone,
-          user_name: user.name,
-          blood_group: user.bloodGroup,
-          medical_conditions: user.conditions,
-          issue_type: issueType,
-          description: description,
-          hospital_name: selectedHospital.name,
-          hospital_lat: selectedHospital.lat,
-          hospital_lng: selectedHospital.lng,
-          user_lat: location.lat,
-          user_lng: location.lng,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setSubmitSuccess(true);
-        // Reset form after 3 seconds
-        setTimeout(() => {
-          setIssueType("");
-          setDescription("");
-          setSelectedHospital(null);
-          setAppointmentTime(null);
-          setSubmitSuccess(false);
-        }, 3000);
-      } else {
-        setSubmitError(data.error || "Failed to submit appointment request");
-      }
-    } catch (error) {
-      console.error("Error submitting appointment:", error);
-      setSubmitError("Network error. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+export default function LandingPage() {
+  const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
-        {/* HEADER */}
-        <div className="text-center mb-8 animate-fade-in">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl mb-4 shadow-lg">
-            <Activity className="w-9 h-9 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
+      {/* HEADER */}
+      <header className="sticky top-0 z-50 glass-effect border-b border-gray-200/50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-700 rounded-lg flex items-center justify-center shadow-md">
+              <Activity className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">ResQNet</h1>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Medical Assistance</h1>
-          <p className="text-gray-600">Request appointment with nearby hospitals</p>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => router.push("/user/sign-in")}
+              className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+            >
+              Login
+            </button>
+            <button
+              onClick={() => router.push("/user/sign-up")}
+              className="px-5 py-2.5 gradient-bg-trust text-white rounded-lg font-medium hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+            >
+              Sign Up
+            </button>
+          </div>
         </div>
+      </header>
 
-        <div className="space-y-6">
-          {/* PATIENT DETAILS CARD */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 animate-slide-up">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                <User className="w-6 h-6 text-blue-600" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-900">Patient Details</h2>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                <User className="w-5 h-5 text-gray-600" />
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Name</p>
-                  <p className="text-gray-900 font-semibold">{user.name}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                <Phone className="w-5 h-5 text-gray-600" />
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Phone</p>
-                  <p className="text-gray-900 font-semibold">{user.phone}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                <Droplet className="w-5 h-5 text-red-600" />
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Blood Group</p>
-                  <p className="text-gray-900 font-semibold">{user.bloodGroup}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                <FileText className="w-5 h-5 text-gray-600" />
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Conditions</p>
-                  <p className="text-gray-900 font-semibold">{user.conditions}</p>
-                </div>
-              </div>
-            </div>
+      {/* HERO SECTION */}
+      <main className="max-w-7xl mx-auto px-6">
+        <div className="flex flex-col items-center justify-center text-center pt-20 pb-16">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-full text-red-700 text-sm font-medium mb-6 animate-fade-in">
+            <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse-slow"></div>
+            24/7 Emergency Response System
           </div>
 
-          {/* MEDICAL ISSUE CARD */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
-                <AlertCircle className="w-6 h-6 text-orange-600" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-900">Medical Issue</h2>
-            </div>
+          <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 tracking-tight text-balance max-w-4xl">
+            Smart Emergency Medical{" "}
+            <span className="bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent">
+              Response Network
+            </span>
+          </h2>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Type of Issue <span className="text-red-600">*</span>
-                </label>
-                <select
-                  className="w-full p-3 border border-gray-300 rounded-xl text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  value={issueType}
-                  onChange={(e) => setIssueType(e.target.value)}
-                >
-                  <option value="">Select medical issue</option>
-                  <option>General Consultation</option>
-                  <option>Accident / Injury</option>
-                  <option>Cardiac</option>
-                  <option>Orthopaedic</option>
-                  <option>Emergency</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description <span className="text-gray-400 font-normal">(Optional)</span>
-                </label>
-                <textarea
-                  placeholder="Brief description of your condition..."
-                  className="w-full p-3 border border-gray-300 rounded-xl text-gray-900 h-24 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* MAP */}
-          {location && (
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-                  <MapPin className="w-6 h-6 text-green-600" />
-                </div>
-                <h2 className="text-xl font-bold text-gray-900">Your Location</h2>
-              </div>
-              <iframe
-                className="w-full h-64 rounded-xl border-2 border-gray-200 shadow-md"
-                src={`https://www.google.com/maps?q=${location.lat},${location.lng}&z=15&output=embed`}
-              />
-            </div>
-          )}
-
-          {/* HOSPITAL SELECTION */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
-                <Hospital className="w-6 h-6 text-purple-600" />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-xl font-bold text-gray-900">Nearby Hospitals</h2>
-                <p className="text-sm text-gray-600">Choose a hospital to view distance and availability</p>
-              </div>
-            </div>
-
-            <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-              {hospitals.slice(0, 10).map((h, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleHospitalSelect(h)}
-                  className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 ${selectedHospital?.name === h.name
-                    ? "border-blue-500 bg-blue-50 shadow-md"
-                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm"
-                    }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Hospital className="w-5 h-5 text-blue-600" />
-                        <p className="font-bold text-gray-900">{h.name}</p>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-4 h-4" />
-                          <span>{h.distance.toFixed(2)} km away</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <User className="w-4 h-4" />
-                          <span>{h.doctor}</span>
-                        </div>
-                      </div>
-                    </div>
-                    {selectedHospital?.name === h.name && (
-                      <CheckCircle className="w-6 h-6 text-blue-600 flex-shrink-0" />
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* ROUTE & APPOINTMENT */}
-          {selectedHospital && location && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl shadow-lg border-2 border-blue-200 p-6 animate-slide-up">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-                  <Navigation className="w-6 h-6 text-white" />
-                </div>
-                <h2 className="text-xl font-bold text-gray-900">Route & Appointment</h2>
-              </div>
-
-              <iframe
-                className="w-full h-64 rounded-xl border-2 border-blue-300 shadow-md mb-4"
-                src={`https://www.google.com/maps?saddr=${location.lat},${location.lng}&daddr=${selectedHospital.lat},${selectedHospital.lng}&output=embed`}
-              />
-
-              <div className="bg-white rounded-xl p-4 mb-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <Clock className="w-5 h-5 text-blue-600" />
-                  <div>
-                    <p className="text-sm text-gray-600">Estimated Appointment Time</p>
-                    <p className="font-bold text-gray-900">{appointmentTime}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Hospital className="w-5 h-5 text-blue-600" />
-                  <div>
-                    <p className="text-sm text-gray-600">Selected Hospital</p>
-                    <p className="font-bold text-gray-900">{selectedHospital.name}</p>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={handleRequestAppointment}
-                disabled={isSubmitting || submitSuccess}
-                className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 ${submitSuccess
-                    ? "bg-green-600 text-white"
-                    : isSubmitting
-                      ? "bg-gray-400 text-white cursor-not-allowed"
-                      : "gradient-bg-trust text-white"
-                  }`}
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Submitting...
-                  </>
-                ) : submitSuccess ? (
-                  <>
-                    <CheckCircle className="w-6 h-6" />
-                    Request Sent Successfully!
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-6 h-6" />
-                    Request Appointment
-                  </>
-                )}
-              </button>
-
-              {submitError && (
-                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl">
-                  <p className="text-red-800 text-sm font-semibold">{submitError}</p>
-                </div>
-              )}
-
-              {submitSuccess && (
-                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-xl">
-                  <p className="text-green-800 text-sm font-semibold">
-                    🎉 Appointment request submitted! The hospital will recomview and respond shortly.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* FOOTER */}
-          <p className="text-center text-xs text-gray-500 mt-6">
-            © {new Date().getFullYear()} ResQNet. All rights reserved. Saving lives, one second at a time.
+          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mb-12 leading-relaxed">
+            ResQNet connects citizens, hospitals, and police in real-time to ensure
+            faster emergency response and better care during the critical golden hour.
           </p>
+
+          {/* SOS SECTION */}
+          <div className="bg-white border-2 border-red-200 rounded-3xl p-8 md:p-10 w-full max-w-md mb-16 shadow-xl hover:shadow-2xl transition-shadow duration-300">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse-slow"></div>
+              <p className="text-red-700 font-bold text-lg">
+                Emergency Situation?
+              </p>
+            </div>
+
+            <button
+              onClick={() => router.push("/user/sos")}
+              className="w-full h-32 gradient-bg-emergency text-white text-3xl font-bold rounded-2xl shadow-lg hover:shadow-xl active:scale-95 transition-all duration-200 animate-emergency-pulse mb-4 flex items-center justify-center gap-3"
+            >
+              <Zap className="w-10 h-10" />
+              SOS
+            </button>
+
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600 flex items-center justify-center gap-2">
+                <Shield className="w-4 h-4 text-green-600" />
+                No login required
+              </p>
+              <p className="text-xs text-gray-500">
+                GPS auto-capture • Instant hospital notification
+              </p>
+            </div>
+          </div>
+
+          {/* FEATURES */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
+            <FeatureCard
+              icon={<Zap className="w-6 h-6 text-red-600" />}
+              title="Lightning Fast"
+              description="Instant GPS-based hospital and police coordination with automated dispatch."
+            />
+            <FeatureCard
+              icon={<Activity className="w-6 h-6 text-blue-600" />}
+              title="Pre-Arrival Ready"
+              description="Hospitals receive patient vitals and emergency details before arrival."
+            />
+            <FeatureCard
+              icon={<Shield className="w-6 h-6 text-indigo-600" />}
+              title="Police Escort"
+              description="Automated traffic management and green corridor for ambulances."
+            />
+          </div>
+
+          {/* STATISTICS */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 w-full max-w-5xl mt-16 mb-8">
+            <StatCard value="<5 min" label="Average Response" />
+            <StatCard value="24/7" label="Always Active" />
+            <StatCard value="100+" label="Partner Hospitals" />
+            <StatCard value="98%" label="Success Rate" />
+          </div>
         </div>
+      </main>
+
+      {/* FOOTER */}
+      <footer className="border-t border-gray-200 bg-white/50 mt-20">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-red-700 rounded-lg flex items-center justify-center">
+                <Activity className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-gray-900 font-semibold">ResQNet</span>
+            </div>
+            <p className="text-sm text-gray-600">
+              © {new Date().getFullYear()} ResQNet. All rights reserved. Saving lives, one second at a time.
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+/* ---------- Feature Card ---------- */
+function FeatureCard({
+  icon,
+  title,
+  description,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="group bg-white border border-gray-200 rounded-2xl p-6 text-left shadow-sm hover:shadow-xl hover:border-gray-300 transition-all duration-300 transform hover:-translate-y-1">
+      <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-gray-100 transition-colors duration-200">
+        {icon}
       </div>
+      <h3 className="font-bold text-gray-900 mb-2 text-lg">{title}</h3>
+      <p className="text-gray-600 text-sm leading-relaxed">{description}</p>
+    </div>
+  );
+}
+
+/* ---------- Stat Card ---------- */
+function StatCard({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-6 text-center hover:shadow-lg transition-shadow duration-200">
+      <div className="text-3xl font-bold text-gray-900 mb-1">{value}</div>
+      <div className="text-sm text-gray-600">{label}</div>
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Shield, MapPin, Clock, AlertCircle, Phone, CheckCircle, Eye, Radio, Siren, Hospital, Navigation } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
-const PoliceMap = dynamic(() => import("./PoliceMap"), {
+const PoliceMap = dynamic(() => import("./map/PoliceMap"), {
   ssr: false,
   loading: () => <div className="h-96 lg:h-[500px] w-full bg-gray-100 animate-pulse rounded-xl flex items-center justify-center text-gray-400 font-medium">Loading Interactive Map...</div>,
 });

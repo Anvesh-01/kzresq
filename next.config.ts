@@ -8,7 +8,6 @@ const withPWA = require("@ducanh2912/next-pwa").default({
 });
 
 const nextConfig: NextConfig = {
-  turbopack: {},
   /* config options here */
 };
 
