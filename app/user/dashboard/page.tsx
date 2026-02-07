@@ -87,48 +87,65 @@ export default function UserDashboard() {
   // Fetch user's emergency/appointment history from database
   useEffect(() => {
     if (userSession) {
-      // Fetch real appointments from database
-      const fetchAppointments = async () => {
+      const fetchUserHistory = async () => {
         try {
-          const response = await fetch(`/api/appointments?user_phone=${encodeURIComponent(userSession.phone_number)}`);
-          const data = await response.json();
+          // Fetch appointments
+          const appointmentsRes = await fetch(
+            `/api/appointments?user_phone=${encodeURIComponent(userSession.phone_number)}`
+          );
+          const appointmentsData = await appointmentsRes.json();
 
-          if (data.success && data.appointments) {
-            // Convert database appointments to Emergency type
-            const dbAppointments: Emergency[] = data.appointments.map((apt: any) => ({
+          // Fetch SOS emergencies
+          const emergenciesRes = await fetch(
+            `/api/emergency?phone=${encodeURIComponent(userSession.phone_number)}`
+          );
+          const emergenciesData = await emergenciesRes.json();
+
+          const combinedHistory: Emergency[] = [];
+
+          // Add appointments
+          if (appointmentsData.success && appointmentsData.appointments) {
+            const dbAppointments: Emergency[] = appointmentsData.appointments.map((apt: any) => ({
               id: apt.id,
               date: new Date(apt.created_at).toISOString().split('T')[0],
               status: apt.status,
               hospital: apt.hospital_name,
               type: "appointment",
-              time: apt.appointment_time ? new Date(apt.appointment_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : undefined,
+              time: apt.appointment_time
+                ? new Date(apt.appointment_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                : undefined,
             }));
-            setEmergencies(dbAppointments);
+            combinedHistory.push(...dbAppointments);
           }
-        } catch (error) {
-          console.error("Failed to fetch appointments:", error);
-          // Keep mock data as fallback
-          setEmergencies([
-            {
-              id: "1",
-              date: "2026-02-05",
-              status: "completed",
-              hospital: "Medical Trust Hospital",
+
+          // Add SOS emergencies
+          if (emergenciesData.success && emergenciesData.data) {
+            const dbEmergencies: Emergency[] = emergenciesData.data.map((emer: any) => ({
+              id: emer.id,
+              date: new Date(emer.created_at).toISOString().split('T')[0],
+              status: emer.status,
+              hospital: emer.assigned_hospital_name || 'Awaiting Assignment',
               type: "emergency",
-            },
-            {
-              id: "2",
-              date: "2026-02-10",
-              status: "pending",
-              hospital: "Beach Hospital",
-              type: "appointment",
-              time: "10:30 AM",
-            },
-          ]);
+            }));
+            combinedHistory.push(...dbEmergencies);
+          }
+
+          // Sort by date (newest first)
+          combinedHistory.sort((a, b) => {
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            return dateB - dateA;
+          });
+
+          setEmergencies(combinedHistory);
+        } catch (error) {
+          console.error("Failed to fetch user history:", error);
+          // Keep empty array on error
+          setEmergencies([]);
         }
       };
 
-      fetchAppointments();
+      fetchUserHistory();
     }
   }, [userSession]);
 
