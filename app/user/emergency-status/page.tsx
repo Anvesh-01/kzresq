@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import { CheckCircle, Clock, AlertCircle, Phone, Ambulance, MapPin } from "lucide-react";
+import Image from "next/image";
 
 export const dynamic = "force-dynamic";
 
@@ -27,9 +28,9 @@ type EmergencyData = {
 export default function EmergencyStatusPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-white flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-100 flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600 font-semibold">Loading...</p>
         </div>
       </div>
@@ -151,9 +152,9 @@ function EmergencyStatusContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-white flex items-center justify-center px-4">
+      <div className="min-h-screen bg-linear-to-br from-green-50 via-white to-emerald-100 flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600 font-semibold">Loading emergency status...</p>
         </div>
       </div>
@@ -162,7 +163,7 @@ function EmergencyStatusContent() {
 
   if (!emergencyData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-white flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-100 flex items-center justify-center px-4">
         <div className="text-center max-w-md">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Emergency Not Found</h1>
@@ -173,62 +174,85 @@ function EmergencyStatusContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 px-4 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-100 px-4 py-8">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* HEADER */}
-        <div className="bg-white rounded-2xl shadow-xl p-6 text-center border border-gray-100">
-          <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <span className="text-3xl">🚨</span>
+        <div className="bg-green-50/90 backdrop-blur-xl rounded-3xl shadow-2xl p-8 text-center border border-green-100/50 hover:shadow-3xl transition-shadow duration-300">
+          {/* Logo with pulse animation */}
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-green-400/30 rounded-2xl blur-xl animate-pulse"></div>
+              <Image
+                src="/KenLogo1.png"
+                alt="KEN Logo"
+                width={90}
+                height={90}
+                className="rounded-2xl relative z-10 shadow-lg"
+              />
+            </div>
           </div>
-          <h1 className="text-3xl font-black text-gray-900 mb-2">
+          
+          <h1 className="text-4xl font-bold bg-linear-to-r from-green-700 via-emerald-600 to-green-700 bg-clip-text text-transparent mb-3">
             Emergency Request Active
           </h1>
-          <p className="text-gray-600 font-medium">
-            Please stay calm. Help is on the way.
-          </p>
-          <p className="text-sm text-gray-500 mt-2 font-mono">
-            Emergency ID: {emergencyData.id.slice(0, 8)}...
-          </p>
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <p className="text-gray-700 font-semibold text-lg">
+              Please stay calm. Help is on the way.
+            </p>
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          </div>
+          <div className="inline-block bg-green-100/80 backdrop-blur-sm px-4 py-2 rounded-full border border-green-200">
+            <p className="text-sm text-gray-700 font-semibold">
+              Emergency ID: <span className="font-mono text-green-700">{emergencyData.id.slice(0, 8)}...</span>
+            </p>
+          </div>
         </div>
 
         {/* STATUS TIMELINE */}
-        <div className={`bg-white rounded-2xl shadow-xl p-6 border-2 ${statusInfo.bgClass}`}>
-          <div className="flex items-center gap-4 mb-4">
-            {statusInfo.icon}
+        <div className={`bg-emerald-50/90 backdrop-blur-xl rounded-3xl shadow-2xl p-7 border-2 ${statusInfo.bgClass} hover:shadow-3xl transition-all duration-300`}>
+          <div className="flex items-center gap-4 mb-6 pb-4 border-b border-gray-200">
+            <div className="p-3 bg-white/80 rounded-xl shadow-md">
+              {statusInfo.icon}
+            </div>
             <div className="flex-1">
-              <p className="font-black text-lg text-gray-900">Current Status</p>
-              <p className={`font-semibold ${statusInfo.textClass}`}>
+              <p className="font-bold text-xl text-gray-900 mb-1">Current Status</p>
+              <p className={`font-semibold text-lg ${statusInfo.textClass}`}>
                 {statusInfo.text}
               </p>
             </div>
           </div>
 
           {/* Status Progress */}
-          <div className="space-y-3 mt-6">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-md flex-shrink-0">
+          <div className="space-y-4 relative">
+            {/* Connecting line */}
+            <div className="absolute left-4 top-6 bottom-6 w-0.5 bg-linear-to-b from-green-300 via-green-200 to-gray-200"></div>
+            
+            <div className="flex items-center gap-4 relative">
+              <div className="w-9 h-9 bg-linear-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 ring-4 ring-green-100 z-10">
                 <CheckCircle className="w-5 h-5 text-white" />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 bg-white/60 backdrop-blur-sm rounded-xl p-3 shadow-sm">
                 <p className="font-bold text-gray-900">Emergency Request Sent</p>
-                <p className="text-xs text-gray-600">Your emergency has been registered</p>
+                <p className="text-xs text-gray-600 mt-0.5">Your emergency has been registered</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md flex-shrink-0 ${emergencyData.status !== "pending"
-                ? "bg-green-500"
-                : "bg-yellow-400 animate-pulse"
-                }`}>
+            <div className="flex items-center gap-4 relative">
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 z-10 ${
+                emergencyData.status !== "pending"
+                  ? "bg-linear-to-br from-green-500 to-green-600 ring-4 ring-green-100"
+                  : "bg-linear-to-br from-yellow-400 to-yellow-500 animate-pulse ring-4 ring-yellow-100"
+              }`}>
                 {emergencyData.status !== "pending" ? (
                   <CheckCircle className="w-5 h-5 text-white" />
                 ) : (
                   <Clock className="w-5 h-5 text-white" />
                 )}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 bg-white/60 backdrop-blur-sm rounded-xl p-3 shadow-sm">
                 <p className="font-bold text-gray-900">Hospital Review</p>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-gray-600 mt-0.5">
                   {emergencyData.status === "pending"
                     ? "Waiting for hospital approval..."
                     : "Approved by hospital"}
@@ -236,16 +260,17 @@ function EmergencyStatusContent() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center shadow-md flex-shrink-0 ${emergencyData.status === "dispatched" || emergencyData.status === "in_progress" || emergencyData.status === "resolved"
-                ? "bg-green-500"
-                : "bg-gray-300"
-                }`}>
+            <div className="flex items-center gap-4 relative">
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center shadow-lg flex-shrink-0 z-10 ${
+                emergencyData.status === "dispatched" || emergencyData.status === "in_progress" || emergencyData.status === "resolved"
+                  ? "bg-linear-to-br from-green-500 to-green-600 ring-4 ring-green-100"
+                  : "bg-gray-300 ring-4 ring-gray-100"
+              }`}>
                 <Ambulance className="w-5 h-5 text-white" />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 bg-white/60 backdrop-blur-sm rounded-xl p-3 shadow-sm">
                 <p className="font-bold text-gray-900">Ambulance Dispatched</p>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-gray-600 mt-0.5">
                   {emergencyData.status === "dispatched" || emergencyData.status === "in_progress" || emergencyData.status === "resolved"
                     ? "Ambulance is on the way"
                     : "Waiting for dispatch"}
@@ -257,48 +282,73 @@ function EmergencyStatusContent() {
 
         {/* HOSPITAL INFO */}
         {emergencyData.assigned_hospital_name && (
-          <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <span className="text-2xl">🏥</span>
+          <div className="bg-green-50/90 backdrop-blur-xl rounded-3xl shadow-2xl p-6 border border-green-100/50 hover:shadow-3xl transition-all duration-300">
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-14 h-14 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center shadow-md">
+                <span className="text-3xl">🏥</span>
               </div>
-              <div>
-                <p className="font-black text-lg text-gray-900">Assigned Hospital</p>
-                <p className="text-gray-600">{emergencyData.assigned_hospital_name}</p>
+              <div className="flex-1">
+                <p className="font-bold text-xl text-gray-900 mb-1">Assigned Hospital</p>
+                <p className="text-gray-700 font-semibold text-lg">{emergencyData.assigned_hospital_name}</p>
               </div>
             </div>
 
-            <span className={`inline-block px-4 py-2 rounded-full text-sm font-bold ${emergencyData.status === "pending"
-              ? "bg-yellow-100 text-yellow-700 border border-yellow-300"
-              : "bg-green-100 text-green-700 border border-green-300"
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4">
+              <span className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold shadow-sm ${
+                emergencyData.status === "pending"
+                  ? "bg-gradient-to-r from-yellow-100 to-yellow-50 text-yellow-800 border border-yellow-300"
+                  : "bg-gradient-to-r from-green-100 to-green-50 text-green-800 border border-green-300"
               }`}>
-              {emergencyData.status === "pending" ? "⏳ Reviewing Request" : "✓ Request Approved"}
-            </span>
+                {emergencyData.status === "pending" ? (
+                  <>
+                    <Clock className="w-4 h-4" />
+                    Reviewing Request
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    Request Approved
+                  </>
+                )}
+              </span>
+            </div>
           </div>
         )}
 
         {/* AMBULANCE INFO */}
         {emergencyData.assigned_ambulance_number && (
-          <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-green-200">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                <Ambulance className="w-7 h-7 text-green-600" />
+          <div className="bg-emerald-50/90 backdrop-blur-xl rounded-3xl shadow-2xl p-6 border-2 border-green-200 hover:shadow-3xl transition-all duration-300">
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-14 h-14 bg-gradient-to-br from-green-100 to-emerald-200 rounded-2xl flex items-center justify-center shadow-md">
+                <Ambulance className="w-8 h-8 text-green-600" />
               </div>
-              <div>
-                <p className="font-black text-lg text-gray-900">Ambulance Details</p>
-                <p className="text-gray-600">Vehicle: {emergencyData.assigned_ambulance_number}</p>
+              <div className="flex-1">
+                <p className="font-bold text-xl text-gray-900 mb-1">Ambulance Details</p>
+                <p className="text-gray-700 font-semibold text-lg">Vehicle: {emergencyData.assigned_ambulance_number}</p>
               </div>
             </div>
 
             {emergencyData.driver_name && (
-              <div className="space-y-2 bg-gray-50 rounded-xl p-4">
-                <p className="text-sm text-gray-700">
-                  <span className="font-bold">Driver:</span> {emergencyData.driver_name}
-                </p>
+              <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <span className="text-lg">👤</span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Driver Name</p>
+                    <p className="text-sm text-gray-800 font-bold">{emergencyData.driver_name}</p>
+                  </div>
+                </div>
                 {emergencyData.driver_phone && (
-                  <p className="text-sm text-gray-700">
-                    <span className="font-bold">Contact:</span> {emergencyData.driver_phone}
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <Phone className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium">Contact Number</p>
+                      <p className="text-sm text-gray-800 font-bold">{emergencyData.driver_phone}</p>
+                    </div>
+                  </div>
                 )}
               </div>
             )}
@@ -307,19 +357,34 @@ function EmergencyStatusContent() {
 
         {/* ETA */}
         {eta && (emergencyData.status === "dispatched" || emergencyData.status === "in_progress") && (
-          <div className="bg-white rounded-2xl shadow-xl p-6 text-center border-2 border-green-200">
-            <p className="font-bold text-gray-800 mb-2">🚑 Estimated Arrival Time</p>
-            <p className="text-4xl font-black text-green-600">
-              {eta} – {eta + 2} min
+          <div className="bg-green-50/90 backdrop-blur-xl rounded-3xl shadow-2xl p-7 text-center border-2 border-green-200 hover:shadow-3xl transition-all duration-300">
+            <div className="mb-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full shadow-lg mb-3">
+                <Ambulance className="w-8 h-8 text-white" />
+              </div>
+            </div>
+            <p className="font-bold text-gray-900 mb-3 text-xl">Estimated Arrival Time</p>
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-5 mb-3">
+              <p className="text-5xl font-bold bg-linear-to-r from-green-600 via-emerald-600 to-green-600 bg-clip-text text-transparent">
+                {eta} – {eta + 2} min
+              </p>
+            </div>
+            <p className="text-sm text-gray-700 font-semibold flex items-center justify-center gap-2">
+              <MapPin className="w-4 h-4 text-green-600" />
+              Please stay at your location
             </p>
-            <p className="text-sm text-gray-600 mt-2">Please stay at your location</p>
           </div>
         )}
 
         {/* MAP */}
         {emergencyData.assigned_hospital_lat && emergencyData.assigned_hospital_lng && (
-          <div className="bg-white rounded-2xl shadow-xl p-4 border border-gray-100">
-            <p className="font-bold text-gray-800 mb-3">📍 Route to Hospital</p>
+          <div className="bg-emerald-50/90 backdrop-blur-xl rounded-3xl shadow-2xl p-6 border border-green-100/50 hover:shadow-3xl transition-all duration-300">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-emerald-200 rounded-xl flex items-center justify-center">
+                <MapPin className="w-6 h-6 text-green-600" />
+              </div>
+              <p className="font-bold text-gray-900 text-xl">Route to Hospital</p>
+            </div>
             <iframe
               className="w-full h-64 rounded-xl border"
               loading="lazy"
@@ -329,14 +394,14 @@ function EmergencyStatusContent() {
         )}
 
         {/* POLICE NOTIFICATION */}
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6">
+        <div className="bg-blue-50/90 backdrop-blur-xl border-2 border-blue-200 rounded-3xl p-6">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
               <span className="text-xl">🚓</span>
             </div>
-            <p className="font-black text-blue-900">Police Notified</p>
+            <p className="font-bold text-blue-900 text-lg">Police Notified</p>
           </div>
-          <p className="text-sm text-blue-700">
+          <p className="text-sm text-blue-800 font-medium">
             Your location and emergency details have been shared with the nearest police control room for additional support.
           </p>
         </div>
@@ -346,7 +411,7 @@ function EmergencyStatusContent() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <a
               href={`tel:${emergencyData.driver_phone}`}
-              className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-4 rounded-xl font-bold text-center shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center justify-center gap-2"
+              className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white py-4 rounded-2xl font-bold text-center shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center justify-center gap-2"
             >
               <Phone className="w-5 h-5" />
               Call Ambulance Driver
@@ -354,7 +419,7 @@ function EmergencyStatusContent() {
 
             <a
               href="tel:108"
-              className="bg-gray-100 hover:bg-gray-200 text-gray-800 py-4 rounded-xl font-bold shadow-md hover:shadow-lg transform hover:scale-105 transition-all flex items-center justify-center gap-2"
+              className="bg-gray-100 hover:bg-gray-200 text-gray-800 py-4 rounded-2xl font-bold shadow-md hover:shadow-lg transform hover:scale-105 transition-all flex items-center justify-center gap-2"
             >
               <Phone className="w-5 h-5" />
               Call Emergency (108)
@@ -363,15 +428,15 @@ function EmergencyStatusContent() {
         )}
 
         {/* HELP TEXT */}
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-center">
+        <div className="bg-red-50/90 backdrop-blur-xl border border-red-200 rounded-3xl p-4 text-center">
           <p className="text-sm text-red-800 font-semibold">
-            ⚠️ In case of life-threatening emergency, call <span className="font-black">108</span> immediately
+            ⚠️ In case of life-threatening emergency, call <span className="font-bold">108</span> immediately
           </p>
         </div>
 
         {/* FOOTER */}
-        <p className="text-center text-xs text-gray-500 mt-6">
-          @2026 Kozikod emergency network (KEN) Every second saves a life
+        <p className="text-center text-sm text-gray-600 mt-6 font-medium">
+          @2026 Kozhikode Emergency Network (KEN) · Every second saves a life
         </p>
       </div>
     </div>
