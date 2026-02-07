@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     // Fetch active hospitals from Supabase within the bounding box
     const { data: hospitals, error } = await supabaseAdmin
       .from("hospitals")
-      .select("id, name, latitude, longitude, phone, address")
+      .select("id, name, latitude, longitude, phone, address, total_beds, occupied_beds, specializations")
       .eq("is_active", true)
       .gte("latitude", minLat)
       .lte("latitude", maxLat)
@@ -69,16 +69,80 @@ export async function POST(req: NextRequest) {
       return NextResponse.json([]);
     }
 
-    // Calculate exact distance and sort
-    const hospitalsWithDistance = hospitals
-      .map((hospital) => ({
-        ...hospital,
-        distance: calculateDistance(latitude, longitude, hospital.latitude, hospital.longitude),
-      }))
-      .sort((a, b) => a.distance - b.distance)
-      .slice(0, 50); // Limit to closest 50
+    // Filter out non-emergency facilities (Dental, Eye, Skin, etc.)
+    // Unless they explicitly list "Emergency" or "Trauma" in specializations
+    const filteredHospitals = hospitals.filter(h => {
+      const name = h.name.toLowerCase();
+      const specs = (h.specializations || []).map((s: string) => s.toLowerCase());
 
-    return NextResponse.json(hospitalsWithDistance);
+      const isEmergencyCapable = specs.includes('emergency') || specs.includes('trauma');
+      if (isEmergencyCapable) return true;
+
+      const userExcludedKeywords = [
+        'dental', 'dentist', 'clinic', 'eye', 'vision', 'skin', 'derma',
+        'hair', 'physio', 'homeo', 'ayurveda', 'wellness', 'cosmetic'
+      ];
+
+      // If name contains any excluded keyword, filter it out
+      const hasExcludedKeyword = userExcludedKeywords.some(keyword => name.includes(keyword));
+
+      return !hasExcludedKeyword;
+    });
+
+    if (filteredHospitals.length === 0) {
+      return NextResponse.json([]);
+    }
+
+
+    if (!hospitals || hospitals.length === 0) {
+      return NextResponse.json([]);
+    }
+
+    // Default weights for scoring
+    const W_DISTANCE = 0.4;
+    const W_LOAD = 0.3;
+    const W_SPECIALIZATION = 0.3;
+
+    // Calculate scores
+    // Calculate scores
+    const scoredHospitals = filteredHospitals.map((hospital) => {
+      const distance = calculateDistance(latitude, longitude, hospital.latitude, hospital.longitude);
+
+      // 1. Distance Score (Inverse: Closer is better)
+      // Cap max distance impact at ~50km for normalization
+      const distanceScore = Math.max(0, 100 - (distance * 2));
+
+      // 2. Load Score (More available beds is better)
+      const totalBeds = hospital.total_beds || 50; // Default if null
+      const occupiedBeds = hospital.occupied_beds || 0;
+      const loadRatio = Math.min(1, occupiedBeds / totalBeds);
+      const loadScore = (1 - loadRatio) * 100;
+
+      // 3. Specialization Score (Match is better)
+      // For now, checks if hospital has ANY specialization listed, assuming basic match. 
+      // Ideally, match against user's specific condition passed in req body.
+      const hasSpecialization = hospital.specializations && hospital.specializations.length > 0;
+      const specializationScore = hasSpecialization ? 100 : 50; // Base 50 for general
+
+      // Weighted Total Score
+      const aiScore = (distanceScore * W_DISTANCE) + (loadScore * W_LOAD) + (specializationScore * W_SPECIALIZATION);
+
+      return {
+        ...hospital,
+        distance,
+        ai_score: Math.round(aiScore),
+        availability: {
+          total: totalBeds,
+          occupied: occupiedBeds,
+          load_percentage: Math.round(loadRatio * 100)
+        }
+      };
+    });
+
+    // Sort by AI Score descending
+    scoredHospitals.sort((a, b) => b.ai_score - a.ai_score);
+
+    return NextResponse.json(scoredHospitals.slice(0, 50));
   } catch (error) {
     console.error("Unexpected error in hospitals API:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
