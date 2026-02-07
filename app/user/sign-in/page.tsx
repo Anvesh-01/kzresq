@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Image from "next/image";
 import { Building2, Lock, User, AlertCircle, Loader2, Shield } from "lucide-react";
 
 export default function LoginPage() {
@@ -22,7 +23,7 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const res = await fetch("/api/auth/hospital/login", {
+      const res = await fetch("/api/auth/user/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -51,19 +52,29 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center px-6 py-12">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-100 flex items-center justify-center px-6 py-12 relative overflow-hidden">
+      {/* BACKGROUND DECORATIONS */}
+      <div className="blur-blob w-96 h-96 bg-green-200 -top-24 -left-24 animate-pulse-slow" />
+      <div className="blur-blob w-[500px] h-[500px] bg-emerald-200 -bottom-32 -right-32 animate-pulse-slow [animation-delay:1s]" />
+
+      <div className="w-full max-w-md relative z-10">
         {/* BRANDING */}
-        <div className="text-center mb-8 animate-fade-in">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl mb-4 shadow-lg">
-            <Building2 className="w-9 h-9 text-white" />
+        <div className="text-center mb-10 animate-blur-fade-in">
+          <div className="inline-flex items-center justify-center mb-6 animate-scale-in">
+            <Image
+              src="/KenLogo1.png"
+              alt="KEN Logo"
+              width={80}
+              height={80}
+              className="rounded-2xl"
+            />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Hospital & Police Dashboard Access</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 animate-slide-up delay-100">Welcome Back</h1>
+          <p className="text-gray-600 font-medium animate-slide-up delay-200">Kozhikode Emergency Network Portal</p>
         </div>
 
         {/* LOGIN CARD */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 animate-slide-up">
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-10 border border-white/50 animate-slide-up delay-300">
           {/* ERROR MESSAGE */}
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 animate-fade-in">
@@ -74,7 +85,7 @@ export default function LoginPage() {
 
           {/* LOGIN FORM */}
           <div className="space-y-5">
-            <div>
+            <div className="animate-slide-up delay-400">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Username
               </label>
@@ -82,17 +93,17 @@ export default function LoginPage() {
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="text"
-                  placeholder="hospital_username"
+                  placeholder="Enter Username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  className="w-full pl-11 pr-4 py-3.5 bg-white/50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 hover:border-green-300 hover:shadow-sm transition-all duration-200 outline-none"
                   disabled={isLoading}
                 />
               </div>
             </div>
 
-            <div>
+            <div className="animate-slide-up delay-500">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
@@ -104,7 +115,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                  className="w-full pl-11 pr-4 py-3.5 bg-white/50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 hover:border-green-300 hover:shadow-sm transition-all duration-200 outline-none shadow-sm"
                   disabled={isLoading}
                 />
               </div>
@@ -113,7 +124,7 @@ export default function LoginPage() {
             <button
               onClick={handleHospitalLogin}
               disabled={isLoading}
-              className="w-full gradient-bg-trust text-white py-3.5 rounded-xl font-semibold hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+              className="w-full gradient-bg-success text-white py-4 rounded-2xl font-bold text-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3 animate-slide-up delay-500"
             >
               {isLoading ? (
                 <>
@@ -122,8 +133,8 @@ export default function LoginPage() {
                 </>
               ) : (
                 <>
-                  <Building2 className="w-5 h-5" />
-                  Login as Hospital
+                  <Building2 className="w-6 h-6" />
+                  Sign In
                 </>
               )}
             </button>
@@ -132,38 +143,17 @@ export default function LoginPage() {
           {/* FORGOT PASSWORD */}
           <button
             onClick={() => router.push("/user/forgot-password")}
-            className="w-full text-sm text-blue-600 hover:text-blue-800 mt-4 font-medium transition-colors duration-200"
+            className="w-full text-sm text-green-600 hover:text-green-800 mt-4 font-medium transition-colors duration-200"
           >
             Forgot Password?
           </button>
 
-          {/* DIVIDER */}
-          <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-sm text-gray-500 font-medium">OR</span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
 
-          {/* POLICE LOGIN */}
-          <button
-            onClick={() => router.push("/login-police")}
-            className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 text-white py-3.5 rounded-xl font-semibold hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
-          >
-            <Shield className="w-5 h-5" />
-            Login as Police
-          </button>
-
-          {/* INFO */}
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-100 rounded-xl">
-            <p className="text-xs text-blue-800 text-center leading-relaxed">
-              For authorized hospital and police personnel only. Contact your administrator for credentials.
-            </p>
-          </div>
         </div>
 
         {/* BACK TO HOME */}
         <button
-          onClick={() => router.push("/user/das")}
+          onClick={() => router.push("/user")}
           className="mt-6 w-full text-center text-gray-600 hover:text-gray-900 text-sm font-medium transition-colors duration-200"
         >
           ← Back to Home
