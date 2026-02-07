@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Building2, Lock, User, AlertCircle, Loader2, Shield } from "lucide-react";
+import Image from "next/image";
+import { Building2, Lock, User, AlertCircle, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -113,7 +114,7 @@ export default function LoginPage() {
             <button
               onClick={handleHospitalLogin}
               disabled={isLoading}
-              className="w-full gradient-bg-trust text-white py-3.5 rounded-xl font-semibold hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+              className="w-full gradient-bg-success text-white py-3.5 rounded-xl font-semibold hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
@@ -122,8 +123,8 @@ export default function LoginPage() {
                 </>
               ) : (
                 <>
-                  <Building2 className="w-5 h-5" />
-                  Login as Hospital
+                  <Building2 className="w-6 h-6" />
+                  Sign In
                 </>
               )}
             </button>
@@ -137,26 +138,10 @@ export default function LoginPage() {
             Forgot Password?
           </button>
 
-          {/* DIVIDER */}
-          <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-sm text-gray-500 font-medium">OR</span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
-
-          {/* POLICE LOGIN */}
-          <button
-            onClick={() => router.push("/login-police")}
-            className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 text-white py-3.5 rounded-xl font-semibold hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
-          >
-            <Shield className="w-5 h-5" />
-            Login as Police
-          </button>
-
           {/* INFO */}
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-100 rounded-xl">
-            <p className="text-xs text-blue-800 text-center leading-relaxed">
-              For authorized hospital and police personnel only. Contact your administrator for credentials.
+          <div className="mt-6 p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
+            <p className="text-xs text-emerald-800 text-center leading-relaxed">
+              For authorized hospital personnel only. Contact your hospital administrator for credentials.
             </p>
           </div>
         </div>
