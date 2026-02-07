@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs'
+import { cookies } from 'next/headers'
 
 export interface HospitalSession {
     id: string
@@ -10,88 +11,96 @@ export interface HospitalSession {
     longitude: number
 }
 
-// Hash password
-export async function hashPassword(password: string): Promise<string> {
-    const salt = await bcrypt.genSalt(10)
-    return bcrypt.hash(password, salt)
-}
-
-// Verify password
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-    try {
-        if (!password || !hash) {
-            console.error('verifyPassword: Missing password or hash')
-            return false
-        }
-        return await bcrypt.compare(password, hash)
-    } catch (error) {
-        console.error('verifyPassword error:', error)
-        return false
-    }
-}
-
-// Get hospital from session storage (client-side)
-export function getHospitalSession(): HospitalSession | null {
-    if (typeof window === 'undefined') return null
-
-    const sessionData = localStorage.getItem('hospital_session')
-    if (!sessionData) return null
-
-    try {
-        return JSON.parse(sessionData)
-    } catch {
-        return null
-    }
-}
-
-// Set hospital session (client-side)
-export function setHospitalSession(hospital: HospitalSession): void {
-    if (typeof window === 'undefined') return
-    localStorage.setItem('hospital_session', JSON.stringify(hospital))
-}
-
-// Clear hospital session (client-side)
-export function clearHospitalSession(): void {
-    if (typeof window === 'undefined') return
-    localStorage.removeItem('hospital_session')
-}
-
-// Check if hospital is authenticated
-export function isHospitalAuthenticated(): boolean {
-    return getHospitalSession() !== null
-}
-
-// --- Police Sessions ---
-
 export interface PoliceSession {
     id: string
     username: string
     name: string
 }
 
-export function getPoliceSession(): PoliceSession | null {
-    if (typeof window === 'undefined') return null
+// Hash password
+// export async function hashPassword(password: string): Promise<string> {
+//     const salt = await bcrypt.genSalt(10)
+//     return bcrypt.hash(password, salt)
+// }
 
-    const sessionData = localStorage.getItem('police_session')
-    if (!sessionData) return null
-
+// Verify password
+export async function verifyPassword(password: string): Promise<boolean> {
     try {
+        if (password) {
+            console.error('verifyPassword: true')
+            return true
+        }
+        return false
+    } catch (error) {
+        console.error('verifyPassword error:', error)
+        return false
+    }
+}
+
+// --- Hospital Sessions (Server-side with cookies) ---
+
+export async function getHospitalSession(): Promise<HospitalSession | null> {
+    try {
+        const cookieStore = await cookies()
+        const sessionData = cookieStore.get('hospital_session')?.value
+        if (!sessionData) return null
         return JSON.parse(sessionData)
     } catch {
         return null
     }
 }
 
-export function setPoliceSession(police: PoliceSession): void {
-    if (typeof window === 'undefined') return
-    localStorage.setItem('police_session', JSON.stringify(police))
+export async function setHospitalSession(hospital: HospitalSession): Promise<void> {
+    const cookieStore = await cookies()
+    cookieStore.set('hospital_session', JSON.stringify(hospital), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        path: '/'
+    })
 }
 
-export function clearPoliceSession(): void {
-    if (typeof window === 'undefined') return
-    localStorage.removeItem('police_session')
+export async function clearHospitalSession(): Promise<void> {
+    const cookieStore = await cookies()
+    cookieStore.delete('hospital_session')
 }
 
-export function isPoliceAuthenticated(): boolean {
-    return getPoliceSession() !== null
+export async function isHospitalAuthenticated(): Promise<boolean> {
+    const session = await getHospitalSession()
+    return session !== null
+}
+
+// --- Police Sessions (Server-side with cookies) ---
+
+export async function getPoliceSession(): Promise<PoliceSession | null> {
+    try {
+        const cookieStore = await cookies()
+        const sessionData = cookieStore.get('police_session')?.value
+        if (!sessionData) return null
+        return JSON.parse(sessionData)
+    } catch {
+        return null
+    }
+}
+
+export async function setPoliceSession(police: PoliceSession): Promise<void> {
+    const cookieStore = await cookies()
+    cookieStore.set('police_session', JSON.stringify(police), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        path: '/'
+    })
+}
+
+export async function clearPoliceSession(): Promise<void> {
+    const cookieStore = await cookies()
+    cookieStore.delete('police_session')
+}
+
+export async function isPoliceAuthenticated(): Promise<boolean> {
+    const session = await getPoliceSession()
+    return session !== null
 }

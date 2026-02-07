@@ -313,7 +313,7 @@ export default function HospitalDashboard() {
   useEffect(() => {
     const session = getHospitalSession();
     if (!session) {
-      router.push('/login');
+      router.push('/hospital/sign-in');
       return;
     }
     setHospitalInfo(session);
@@ -444,7 +444,7 @@ export default function HospitalDashboard() {
 
   const handleLogout = () => {
     clearHospitalSession();
-    router.push('/login');
+    router.push('/hospital/sign-in');
   };
 
   // ✅ FIX: Added loading state and better error handling
