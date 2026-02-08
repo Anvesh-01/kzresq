@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Hash the new password
-        const passwordHash = await newPassword
+        // Store the new password (TODO: implement proper hashing in production)
+        const passwordHash = newPassword
 
         // Update password and clear reset token
         const { error: updateError } = await supabaseAdmin
