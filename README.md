@@ -1,11 +1,8 @@
  # Project Name
-KEN
-
-# Problem Statement ID
-CS05TS
+KEN - Kozhikode Emergency Network
 
 # Team Name
-Team Information.
+Vibe Coders
 
 # College Name
 St Aloysius University 

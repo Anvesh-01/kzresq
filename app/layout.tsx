@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import 'leaflet/dist/leaflet.css';
@@ -18,7 +18,6 @@ export const metadata: Metadata = {
   title: "ResQNet",
   description: "Smart Emergency Medical Response System",
   manifest: "/manifest.json",
-  themeColor: "#dc2626",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -27,6 +26,10 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#dc2626",
 };
 
 import { LanguageProvider } from "@/components/LanguageContext";
