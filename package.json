@@ -29,8 +29,9 @@
     "typescript": "^5.7.2"
   },
   "overrides": {
-    "glob": "^10.3.10",
-    "inflight": "npm:@aashutoshrathi/inflight@1.0.0",
-    "sourcemap-codec": "@jridgewell/sourcemap-codec"
+    "react-leaflet": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    }
   }
 }
