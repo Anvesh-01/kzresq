@@ -1,4 +1,4 @@
-import bcrypt from 'bcryptjs'
+
 import { cookies } from 'next/headers'
 
 export interface HospitalSession {

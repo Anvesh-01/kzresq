@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
-import { hashPassword } from '@/lib/auth'
+
 
 /**
  * POST /api/auth/hospital/reset-password
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Hash the new password
-        const passwordHash = await hashPassword(newPassword)
+        const passwordHash = await newPassword
 
         // Update password and clear reset token
         const { error: updateError } = await supabaseAdmin
