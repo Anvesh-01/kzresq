@@ -1,71 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export function middleware(req: NextRequest) {
-  const host = req.headers.get("host") || "";
-  const url = req.nextUrl.clone();
+  const url = req.nextUrl;
+  const hostname = req.headers.get("host") || "";
+  
+  // Get the root domain from env or default to localhost
+  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "localhost:3000";
 
-  // Ignore Next.js internal files
+  // Determine current subdomain
+  // Case 1: Subdomain exists (e.g. ambulance.localhost:3000 -> ambulance)
+  // Case 2: Root domain (e.g. localhost:3000 -> user)
+  const currentHost =
+    hostname.replace(`.${rootDomain}`, "") === "www" || 
+    hostname === rootDomain
+      ? "user" 
+      : hostname.replace(`.${rootDomain}`, "");
+
+
+  // Prevent rewriting for public files and api
   if (
     url.pathname.startsWith("/_next") ||
     url.pathname.startsWith("/api") ||
-    url.pathname.includes(".")
+    url.pathname.startsWith("/static") ||
+    url.pathname.includes(".") // files like favicon.ico
   ) {
     return NextResponse.next();
   }
 
-  let subdomain = "";
-
-  // For localhost (development)
-  if (host.includes("localhost")) {
-    subdomain = url.searchParams.get("sub") || "";
+  // Rewrite URL to the appropriate subdirectory
+  if (currentHost === "ambulance") {
+    url.pathname = `/ambulance${url.pathname}`;
+    return NextResponse.rewrite(url);
   }
-  // For production (kzresq.com)
-  else {
-    subdomain = host.split(".")[0];
+  if (currentHost === "hospital") {
+    url.pathname = `/hospital${url.pathname}`;
+    return NextResponse.rewrite(url);
   }
-
-
-  /* ===============================
-     Prevent Rewrite Loop
-     =============================== */
-  if (
-    url.pathname.startsWith("/user") ||
-    url.pathname.startsWith("/ambulance") ||
-    url.pathname.startsWith("/hospital") ||
-    url.pathname.startsWith("/police")
-  ) {
-    return NextResponse.next();
+  if (currentHost === "police") {
+    url.pathname = `/police${url.pathname}`;
+    return NextResponse.rewrite(url);
+  }
+  if (currentHost === "user") {
+    url.pathname = `/user${url.pathname}`;
+    return NextResponse.rewrite(url);
   }
 
-  /* ===============================
-     Subdomain Routing
-     =============================== */
-  switch (subdomain) {
-    case "user":
-      url.pathname = `/user${url.pathname}`;
-      break;
-
-    case "ambulance":
-      url.pathname = `/ambulance${url.pathname}`;
-      break;
-
-    case "hospital":
-      url.pathname = `/hospital${url.pathname}`;
-      break;
-
-    case "police":
-      url.pathname = `/police${url.pathname}`;
-      break;
-
-    default:
-      // Unknown subdomain → go to main user portal
-      url.pathname = "/user";
-      break;
-  }
-
-  return NextResponse.rewrite(url);
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!_next|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

@@ -15,13 +15,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ResQNet",
+  title: "KEN",
   description: "Smart Emergency Medical Response System",
   manifest: "/manifest.json",
+  icons: "/KenLogo.png",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "ResQNet",
+    title: "KEN",
   },
   formatDetection: {
     telephone: false,

@@ -1,6 +1,6 @@
 {
-    "name": "ResQNet",
-    "short_name": "ResQNet",
+    "name": "KEN",
+    "short_name": "KEN",
     "description": "Smart Emergency Medical Response System",
     "start_url": "/",
     "display": "standalone",
